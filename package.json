@@ -1,0 +1,59 @@
+{
+	"author": "McCall Alexander",
+	"license": "UNLICENSED",
+	"name": "permalink-web-archive",
+	"version": "1.0.0",
+	"engines": {
+		"node": "12.10.0"
+	},
+	"description": "An Arweave Permalink Web Archive Tool",
+	"main": "lib/index.js",
+	"scripts": {
+		"postinstall": "rm -f node_modules/web3/index.d.ts && npm run contracts:type",
+		"type-check": "tsc --noEmit",
+		"type-check:watch": "npm run type-check -- --watch",
+		"dev": "webpack-dev-server --port 9000 --inline --progress --profile --colors --watch --content-base src/ --mode development",
+		"build": "webpack --config webpack.config.js --mode production",
+		"test": "jest --watch",
+		"deploy": "npm i && git add -A && git commit -am 'deploying' && git push origin master",
+		"execute": "babel-node --config-file ./babel.config.js -x \".js\",\".ts\"",
+		"execute:load-abis": "npm run execute ./scripts/load-abis.ts",
+		"contracts:type": "typechain --target web3-v2 --outDir ./contracts/types './contracts/abis/*.json'",
+		"contracts:load": "node ./scripts/load-abis.js",
+		"contracts:init": "npm run contracts:load && npm run contracts:type"
+	},
+	"dependencies": {
+		"@0x/web3-wrapper": "^7.0.4",
+		"@types/jest": "^24.9.0",
+		"bignumber.js": "^9.0.0",
+		"core-js": "^3.6.1",
+		"cross-fetch": "^3.0.4",
+		"eth-contract-metadata": "^1.11.0",
+		"regenerator-runtime": "^0.13.3",
+		"web3": "^1.2.5-rc.0",
+		"web3-core": "^1.2.5-rc.0",
+		"web3-eth-contract": "^1.2.5-rc.0"
+	},
+	"devDependencies": {
+		"@babel/cli": "^7.7.7",
+		"@babel/core": "^7.7.7",
+		"@babel/node": "^7.7.7",
+		"@babel/preset-env": "^7.7.7",
+		"@babel/preset-typescript": "^7.7.7",
+		"@types/express": "^4.17.2",
+		"@types/node": "^13.1.8",
+		"@types/underscore": "^1.9.4",
+		"awesome-typescript-loader": "^5.2.1",
+		"babel-loader": "^8.0.4",
+		"babel-plugin-transform-class-properties": "^6.24.1",
+		"babel-watch": "^7.0.0",
+		"file-loader": "^5.0.2",
+		"jest": "^24.9.0",
+		"typechain": "^1.0.4",
+		"typechain-target-web3-v2": "^1.0.0",
+		"typescript": "^3.7.4",
+		"webpack": "^4.41.5",
+		"webpack-cli": "^3.3.10",
+		"webpack-dev-server": "^3.10.1"
+	}
+}

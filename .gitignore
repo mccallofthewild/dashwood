@@ -1,0 +1,24 @@
+# dependencies
+node_modules
+
+# logs
+npm-debug.log
+
+# Environment Variables
+.env
+env.json
+
+.DS_Store
+
+lib
+
+wallet.json
+# For testing without wallet file
+ignore.wallet.json
+
+dist
+
+# yarn.lock works better with heroku, but npm works better for typescript development
+package-lock.json
+
+contracts/types/*
