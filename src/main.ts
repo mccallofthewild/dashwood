@@ -4,6 +4,7 @@ import { AppService } from './services/AppService';
 import './app.scss';
 import { Erc20Data } from './utils/Erc20Data';
 import * as QRCode from 'qrcode';
+import { FlipAnimation } from './utils/FLIPAnimation';
 
 const LOGO_IMAGE = require('./assets/logo.png').default;
 
@@ -18,51 +19,74 @@ const $ = (...args: [TemplateStringsArray, ...any[]]) => {
 };
 
 const els = {
-	logo: $`[role=logo]`,
+	// ROOT (APP LEVEL)
+	rootLogoContainer: $`[role='root--logo-container']`,
+	rootLogo: $`[role=root--logo]`,
+	// HOME
 	homeStep: $`[role='steps--home']`,
 	homeContinue: $`[role='home--continue']`,
+	homeLogo: $`[role='home--logo']`,
+	// SELECT TOKEN
 	selectTokenStep: $`[role=steps--select-token]`,
 	selectTokenSelect: $`[role="select-token--select"]`,
 	selectTokenForm: $`[role="select-token--form"]`,
+	// DEPOSIT FUNDS
 	depositFundsStep: $`[role="steps--deposit-funds"]`,
 	depositFundsAddress: $`[role="deposit-funds--address"]`,
 	depositFundsQrCode: $`[role="deposit-funds--qrcode"]`
 } as const;
 
-Erc20Data.tokens.forEach(token => {
-	const option = document.createElement('option');
-	option.setAttribute('value', token.name);
-	option.innerHTML = token.name;
-	els.selectTokenSelect.appendChild(option);
-});
-
-rootStore.addListener((state, action) => {
+// TRANSFER STAGE DOM REACTIONS
+rootStore.addListener(async (state, action) => {
 	switch (action[0]) {
-		case 'SET_THROWAWAY_WALLET_BALANCE': {
+		case 'SET_TRANSFER_STAGE': {
+			let activeStageEl = els.homeStep;
+			switch (action[1]) {
+				case 'HOME_STAGE': {
+					activeStageEl = els.homeStep;
+					break;
+				}
+				case 'TOKEN_SELECT_STAGE': {
+					await FlipAnimation.fade(`[role="steps--home"] > *:not([animated])`);
+					await FlipAnimation.transition(
+						els.homeLogo as HTMLElement,
+						els.rootLogo as HTMLElement
+					);
+					activeStageEl = els.selectTokenStep;
+					break;
+				}
+				case 'DEPOSIT_STAGE': {
+					activeStageEl = els.depositFundsStep;
+					break;
+				}
+			}
+			[els.homeStep, els.depositFundsStep, els.selectTokenStep].forEach(el =>
+				el.removeAttribute('active')
+			);
+			activeStageEl.setAttribute('active', 'active');
 		}
 	}
 });
 
 // HOME
-els.logo.setAttribute('src', LOGO_IMAGE);
 
-els.homeContinue.addEventListener('click', () => {
-	els.homeStep.removeAttribute('active');
-	els.selectTokenStep.setAttribute('active', 'active');
-});
+els.homeContinue.addEventListener('click', () =>
+	rootStore.dispatch(['SET_TRANSFER_STAGE', 'TOKEN_SELECT_STAGE'])
+);
 
 // SELECTING TOKEN
+
 els.selectTokenSelect.addEventListener('change', () => {
 	console.log(((els.selectTokenSelect as unknown) as any).value);
 });
 
-els.selectTokenForm.addEventListener('submit', () => {
-	els.selectTokenStep.removeAttribute('active');
-	alert(
-		`This Dapp is under active development. Please do not send any cryptocurrency or tokens to the addresses provided at this time.`
-	);
-	els.depositFundsStep.setAttribute('active', 'active');
-});
+els.selectTokenForm.addEventListener(
+	'submit',
+	() => rootStore.dispatch(['SET_TRANSFER_STAGE', 'DEPOSIT_STAGE']),
+	{
+		once: true
+	}
+);
 
 // DEPOSITING FUNDS
 
@@ -91,10 +115,30 @@ rootStore.addListener(async (state, action) => {
 	}
 });
 
-document.querySelectorAll('form').forEach(f =>
-	f.addEventListener('submit', e => {
-		e.preventDefault();
-		console.log(f);
-		console.log('prevented default');
-	})
-);
+// Initializing DOM
+
+async function initalize() {
+	Erc20Data.tokens.forEach(token => {
+		const option = document.createElement('option');
+		option.setAttribute('value', token.name);
+		option.innerHTML = token.name;
+		els.selectTokenSelect.appendChild(option);
+	});
+	document.querySelectorAll('form').forEach(f =>
+		f.addEventListener('submit', e => {
+			e.preventDefault();
+			console.log(f);
+			console.log('prevented default');
+		})
+	);
+	await fetch(LOGO_IMAGE);
+	await Promise.all(
+		[els.homeLogo, els.rootLogo].map(el => {
+			return new Promise(r => {
+				el.addEventListener('load', r);
+				el.setAttribute('src', LOGO_IMAGE);
+			});
+		})
+	);
+}
+initalize();

@@ -13,8 +13,13 @@
 	</head>
 	<body>
 		<main>
+			<div role="root--logo-container">
+				<img style="opacity: 0;" role="root--logo" alt="logo image" />
+			</div>
 			<section role="steps--home" step="home" active>
-				<img role="logo" alt="logo image" />
+				<div animated role="home--logo-container">
+					<img role="home--logo" alt="logo image" />
+				</div>
 				<p role="slogan">The elegant way to pass down your fortune</p>
 				<button role="home--continue">Continue</button>
 			</section>

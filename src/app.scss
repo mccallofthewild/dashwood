@@ -24,6 +24,7 @@ button,
 input,
 select {
 	padding: 10px 20px;
+	height: 40px;
 	background-color: rgba(255, 255, 255, 0.13);
 	margin: 5px 10px;
 	font-size: 20px;
@@ -37,6 +38,7 @@ select {
 }
 button {
 	text-transform: uppercase;
+	letter-spacing: 2px;
 }
 
 body {
@@ -49,9 +51,17 @@ body {
 img:not([src]) {
 	opacity: 0;
 }
-
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
 // App
 main {
+	position: relative;
 	background-size: cover;
 	background-position: center;
 	background-repeat: no-repeat;
@@ -62,9 +72,23 @@ main {
 	width: 85vw;
 	margin: 5vh 7.5vw;
 	border-radius: 8px;
+	text-align: center;
+}
+[role='root--logo-container'] {
+	width: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	text-align: center;
+	[role='root--logo'] {
+		height: 40px;
+		margin: 10px;
+	}
 }
 
 main > section {
+	animation: fadeIn 450ms ease-in;
 	height: 100%;
 	width: auto;
 	display: flex;
@@ -77,8 +101,13 @@ main > section {
 }
 
 [role='steps--home'] {
-	[role='logo'] {
-		width: 66%;
+	[role='home--logo-container'] {
+		max-height: 33vh;
+		max-width: 66%;
+		[role='home--logo'] {
+			max-height: 100%;
+			max-width: 100%;
+		}
 	}
 	[role='slogan'] {
 		margin-top: 20px;
