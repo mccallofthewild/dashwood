@@ -10,7 +10,7 @@ The elegant way to pass down your fortune
 
 Sense and Sensibility by Jane Austen tells the whirlwind tale of inheritance strife amongst the fictional Dashwood family. Without spoiling the ending, it is safe to say that the Dashwoods make very poor decisions
 
-# 🏊‍♀️ Product Deepdive
+<!-- # 🏊‍♀️ Product Deepdive -->
 
 # 🚀 Usage & Deployment
 
@@ -40,4 +40,16 @@ or
 
 ```
 npm i
+```
+
+### 📡 Start Dev Server
+
+```
+yarn dev
+```
+
+or
+
+```
+npm run dev
 ```
