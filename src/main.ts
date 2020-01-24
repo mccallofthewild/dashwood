@@ -53,11 +53,14 @@ els.homeContinue.addEventListener('click', () => {
 
 // SELECTING TOKEN
 els.selectTokenSelect.addEventListener('change', () => {
-	console.log(els.selectTokenSelect.getAttribute('value'));
+	console.log(((els.selectTokenSelect as unknown) as any).value);
 });
 
 els.selectTokenForm.addEventListener('submit', () => {
 	els.selectTokenStep.removeAttribute('active');
+	alert(
+		`This Dapp is under active development. Please do not send any cryptocurrency or tokens to the addresses provided at this time.`
+	);
 	els.depositFundsStep.setAttribute('active', 'active');
 });
 

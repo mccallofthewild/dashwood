@@ -46,6 +46,10 @@ body {
 	min-height: 100vh;
 }
 
+img:not([src]) {
+	opacity: 0;
+}
+
 // App
 main {
 	background-size: cover;
