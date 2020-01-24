@@ -9,6 +9,8 @@ import { AbiItem } from 'web3-utils/types/index';
 import { ERC20 } from '../../contracts/types/ERC20';
 import { MouseEntropy } from '../utils/MouseEntropy';
 import Web3 from 'web3';
+
+// console.log(context);
 export class AppService {
 	async init() {
 		MouseEntropy.start();

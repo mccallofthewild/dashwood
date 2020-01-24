@@ -5,20 +5,41 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
 		<title>Dashwood Inheritance</title>
-		<link rel="stylesheet" href="app.css" />
+		<link rel="stylesheet" href="https://use.typekit.net/mul5jcy.css" />
+		<link
+			rel="stylesheet"
+			href="<%=htmlWebpackPlugin.files.chunks.main.css %>"
+		/>
 	</head>
 	<body>
 		<main>
-			<section>
-				<ol>
-					<li>
-						<form>
-							<input type="text" name="info" />
-						</form>
-					</li>
-				</ol>
+			<section role="steps--home" step="home">
+				<img role="logo" alt="logo image" />
+				<p role="slogan">The elegant way to pass down your fortune</p>
+				<button role="home--continue">Continue</button>
+			</section>
+			<section role="steps--select-token" step="select-token">
+				<form role="select-token--form">
+					<p>Select the token you would like to send</p>
+					<select role="select-token--select"> </select>
+					<button type="submit">Continue</button>
+				</form>
+			</section>
+			<section role="steps--deposit-funds" active>
+				<form role="deposit-funds--form">
+					<p>Deposit funds to this address:</p>
+					<p>
+						<a role="deposit-funds--address"></a>
+					</p>
+					<img
+						style="mix-blend-mode:screen; filter: invert(100%)"
+						width="300px"
+						role="deposit-funds--qrcode"
+						alt="QR Code"
+					/>
+				</form>
 			</section>
 		</main>
-		<script src="/bundle.js"></script>
+		<script src="<%= htmlWebpackPlugin.files.chunks.main.entry %>"></script>
 	</body>
 </html>

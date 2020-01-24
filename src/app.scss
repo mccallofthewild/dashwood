@@ -1,0 +1,88 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+p,
+a,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+button,
+input,
+select,
+datalist {
+	font-family: garamond-premier-pro-display, serif;
+	font-weight: 100;
+	font-style: normal;
+	color: white;
+}
+
+button,
+input,
+select {
+	padding: 10px 20px;
+	background-color: rgba(255, 255, 255, 0.13);
+	margin: 5px 10px;
+	font-size: 20px;
+	font-weight: 400;
+	border: none;
+	color: white;
+	cursor: pointer;
+	&:focus {
+		outline: none;
+	}
+}
+button {
+	text-transform: uppercase;
+}
+
+body {
+	background-color: #fafafa;
+	height: 100%;
+	width: 100%;
+	min-height: 100vh;
+}
+
+// App
+main {
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-image: url('assets/background.png');
+	width: 100vw;
+	height: 100vh;
+	height: 90vh;
+	width: 85vw;
+	margin: 5vh 7.5vw;
+	border-radius: 8px;
+}
+
+main > section {
+	height: 100%;
+	width: auto;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
+	&:not([active]) {
+		display: none;
+	}
+}
+
+[role='steps--home'] {
+	[role='logo'] {
+		width: 66%;
+	}
+	[role='slogan'] {
+		margin-top: 20px;
+		font-size: 40px;
+		color: #ffffff;
+		letter-spacing: 0;
+	}
+	[role='home--continue'] {
+		margin-top: 20px;
+	}
+}

@@ -1,6 +1,6 @@
-<p align="center"><a href="APP_URL" target="_blank" rel="noopener noreferrer"><img width="300" src="APP_LOGO_URL" alt="APP_NAME Logo"></a></p>
+<p align="center"><a href="APP_URL" target="_blank" rel="noopener noreferrer"><img width="300" src="./src/assets/logo-dark.png" alt="Dashwood Logo"></a></p>
 <p align="center">
-APP_ONE_LINE_DESCRIPTION / SLOGAN
+The elegant way to pass down your fortune
 </p>
 <p align="center">
 	APP_URL
