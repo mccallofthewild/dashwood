@@ -6,10 +6,7 @@ export class MouseEntropy {
 		() => +(Math.random() * Date.now()).toString().replace('.', '')
 	);
 	static get entropy() {
-		console.log(this._entropy);
-		const rtn = this._entropy.join('');
-		console.log(rtn);
-		return rtn;
+		return this._entropy.join('');
 	}
 	static start() {
 		// const this._entropy = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]

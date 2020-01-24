@@ -22,3 +22,5 @@ dist
 package-lock.json
 
 contracts/types/*
+
+exml.js
