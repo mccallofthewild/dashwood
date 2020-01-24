@@ -7,11 +7,8 @@ import SABLIER_ABI from '../../contracts/abis/Sablier.json';
 import ERC20_ABI from '../../contracts/abis/ERC20.json';
 import { AbiItem } from 'web3-utils/types/index';
 import { ERC20 } from '../../contracts/types/ERC20';
-import Web3 from 'web3';
 import { MouseEntropy } from '../utils/MouseEntropy';
-import BN from 'bn.js';
-import { Account, TransactionReceipt } from 'web3-core';
-
+import Web3 from 'web3';
 export class AppService {
 	async init() {
 		MouseEntropy.start();
@@ -60,10 +57,6 @@ export class AppService {
 		}, 5000);
 	}
 
-	createSablierStream() {
-		const sablier = rootStore.currentState.contracts.sablier;
-		// rootStore.currentState.contracts.sablier.methods.createStream(recipient, deposit, tokenAddress, startTime, stopTime)
-	}
 	async loadWeb3(): Promise<Web3> {
 		return new Promise(r => {
 			window.addEventListener('load', () => {

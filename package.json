@@ -3,9 +3,6 @@
 	"license": "UNLICENSED",
 	"name": "permalink-web-archive",
 	"version": "1.0.0",
-	"engines": {
-		"node": "12.10.0"
-	},
 	"description": "An Arweave Permalink Web Archive Tool",
 	"main": "lib/index.js",
 	"scripts": {

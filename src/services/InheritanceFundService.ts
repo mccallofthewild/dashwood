@@ -83,30 +83,23 @@ export const createPayroll = (web3: Web3) => async (
 			gasPrice: gasPrice
 		});
 	}
+	// Approve the Sablier contract to spend the controller's tokens
+	const approveTx = await rootStore.currentState.contracts.erc20.methods
+		.approve(Addresses.Sablier.MAINNET, amount.toString())
+		.send({
+			from: controllerAccount.address,
+			gas: gasForApproval.toString(),
+			gasPrice: gasPrice
+		});
 
-	// this.setState({ processStatusState: 2 });
-	if (isApprovalNeeded) {
-		// Approve the Sablier contract to spend the controller's tokens
-		const approveTx = await rootStore.currentState.contracts.erc20.methods
-			.approve(Addresses.Sablier.MAINNET, amount.toString())
-			.send({
-				from: controllerAccount.address,
-				gas: gasForApproval.toString(),
-				gasPrice: gasPrice
-			});
-	}
-
-	// this.setState({ processStatusState: 3 });
-	if (areTokensRequired) {
-		// Top up the controller's tokens to the requested amount
-		const transferTx = await rootStore.currentState.contracts.erc20.methods
-			.transfer(controllerAccount.address, numTokensRequired.toString())
-			.send({
-				from: fromAddress,
-				gas: gasForERC20Transfer.toString(),
-				gasPrice: gasPrice
-			});
-	}
+	// Top up the controller's tokens to the requested amount
+	const transferTx = await rootStore.currentState.contracts.erc20.methods
+		.transfer(controllerAccount.address, numTokensRequired.toString())
+		.send({
+			from: fromAddress,
+			gas: gasForERC20Transfer.toString(),
+			gasPrice: gasPrice
+		});
 
 	// Create the Sablier stream.
 	// Unfortunately, we can't pre-create this because the contract transfers all tokens immediately.
@@ -120,9 +113,7 @@ export const createPayroll = (web3: Web3) => async (
 			endTime.toString()
 		)
 		.send({
-			from: controllerAccount.address,
-			gas: gasForStreamCreation.toString(),
-			gasPrice: gasPrice
+			from: controllerAccount.address
 		})
 		.on('receipt', receipt => {
 			const streamId = receipt.events.CreateStream.returnValues.streamId;
