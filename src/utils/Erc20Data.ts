@@ -1,12 +1,14 @@
 import _Erc20TokensMap from 'eth-contract-metadata';
+
+export interface ERC20TokenInfo {
+	name: string;
+	logo: string;
+	erc20: true;
+	symbol: string;
+	decimals: number;
+}
 const Erc20TokensMap: {
-	[key: string]: {
-		name: string;
-		logo: string;
-		erc20: true;
-		symbol: string;
-		decimals: number;
-	};
+	[key: string]: ERC20TokenInfo;
 } = _Erc20TokensMap;
 
 // @ts-ignore

@@ -4,6 +4,7 @@ import { Sablier } from '../contracts/types/Sablier';
 import { ERC20 } from '../contracts/types/ERC20';
 import { Account } from 'web3-core/types';
 import { AppService } from './services/AppService';
+import { ERC20TokenInfo } from './utils/Erc20Data';
 
 type TransferStage =
 	| 'HOME_STAGE'
@@ -15,8 +16,9 @@ export type Action =
 	| ['SET_SABLIER_CONTRACT', Sablier]
 	| ['SET_ERC20_CONTRACT', ERC20]
 	| ['SET_THROWAWAY_WALLET', Account]
-	| ['SET_THROWAWAY_WALLET_BALANCE', string]
-	| ['SET_TRANSFER_STAGE', TransferStage];
+	| ['SET_THROWAWAY_WALLET_ETHER_BALANCE', string]
+	| ['SET_TRANSFER_STAGE', TransferStage]
+	| ['SET_ERC20_TOKEN', ERC20TokenInfo];
 
 export interface State {
 	web3?: Web3;
@@ -24,9 +26,10 @@ export interface State {
 		sablier?: Sablier;
 		erc20?: ERC20;
 	};
-	throwawayWalletBalance?: string;
+	throwawayWalletEtherBalance?: string;
 	throwawayWallet?: Account;
 	transferStage: TransferStage;
+	erc20Token?: ERC20TokenInfo;
 }
 
 export const rootStore = new Store<Action, State>(
@@ -67,16 +70,22 @@ export const rootStore = new Store<Action, State>(
 					throwawayWallet: action[1]
 				};
 			}
-			case 'SET_THROWAWAY_WALLET_BALANCE': {
+			case 'SET_THROWAWAY_WALLET_ETHER_BALANCE': {
 				return {
 					...state,
-					throwawayWalletBalance: action[1]
+					throwawayWalletEtherBalance: action[1]
 				};
 			}
 			case 'SET_TRANSFER_STAGE': {
 				return {
 					...state,
 					transferStage: action[1]
+				};
+			}
+			case 'SET_ERC20_TOKEN': {
+				return {
+					...state,
+					erc20Token: action[1]
 				};
 			}
 		}

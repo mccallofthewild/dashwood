@@ -16,7 +16,7 @@ export class AppService {
 		MouseEntropy.start();
 		const web3 = await this.loadWeb3();
 		rootStore.dispatch(['SET_WEB3', web3]);
-		this.liveUpdateThrowawayWalletBalance();
+		this.liveUpdatethrowawayWalletEtherBalance();
 	}
 
 	generateThrowawayWallet() {
@@ -43,19 +43,19 @@ export class AppService {
 		rootStore.dispatch(['SET_ERC20_CONTRACT', erc20Contract]);
 	}
 
-	async liveUpdateThrowawayWalletBalance() {
+	async liveUpdatethrowawayWalletEtherBalance() {
 		try {
 			if (rootStore.currentState.throwawayWallet) {
 				const balance = await rootStore.currentState.web3.eth.getBalance(
 					rootStore.currentState.throwawayWallet.address
 				);
-				rootStore.dispatch(['SET_THROWAWAY_WALLET_BALANCE', balance]);
+				rootStore.dispatch(['SET_THROWAWAY_WALLET_ETHER_BALANCE', balance]);
 			}
 		} catch (e) {
 			console.error(e);
 		}
 		setTimeout(() => {
-			this.liveUpdateThrowawayWalletBalance();
+			this.liveUpdatethrowawayWalletEtherBalance();
 		}, 5000);
 	}
 

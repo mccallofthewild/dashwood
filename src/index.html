@@ -24,27 +24,43 @@
 				<div animated style="margin-top: 20px">
 					<button animated role="home--continue">Continue</button>
 				</div>
+				<!-- <animated-tree-vector height="50"></animated-tree-vector> -->
 			</section>
 			<section role="steps--select-token" step="select-token">
-				<form role="select-token--form">
+				<form animated role="select-token--form">
 					<p>Select the token you would like to send</p>
-					<select role="select-token--select"> </select>
+					<select required role="select-token--select">
+						<option value="" disabled selected>Select token</option>
+					</select>
 					<button transition-target role="select-token--continue" type="submit">
 						Continue
 					</button>
 				</form>
 			</section>
 			<section role="steps--deposit-funds">
-				<form role="deposit-funds--form">
+				<form animated role="deposit-funds--form">
 					<h1>DEVELOPMENT AREA! DANGER! DO NOT SEND FUNDS!</h1>
-					<p>Deposit funds to this address:</p>
+					<p>
+						Deposit <span role="deposit-funds--token-name"></span> and
+						<a
+							href="https://www.investopedia.com/terms/g/gas-ethereum.asp"
+							target="_blank"
+						>
+							Ethereum gas
+						</a>
+						to this address:
+					</p>
 					<p>
 						<a role="deposit-funds--address"></a>
 					</p>
-					<img width="300px" role="deposit-funds--qrcode" alt="QR Code" />
+					<img width="200px" role="deposit-funds--qrcode" alt="QR Code" />
 				</form>
+				<button transition-target role="deposit-funds--continue" type="submit">
+					Continue
+				</button>
 			</section>
 		</main>
+		<h1>Powered by Sablier</h1>
 		<script src="<%= htmlWebpackPlugin.files.chunks.main.entry %>"></script>
 	</body>
 </html>
