@@ -14,20 +14,24 @@
 	<body>
 		<main>
 			<div role="root--logo-container">
-				<img style="opacity: 0;" role="root--logo" alt="logo image" />
+				<img transition-target role="root--logo" alt="logo image" />
 			</div>
 			<section role="steps--home" step="home" active>
 				<div animated role="home--logo-container">
 					<img role="home--logo" alt="logo image" />
 				</div>
 				<p role="slogan">The elegant way to pass down your fortune</p>
-				<button role="home--continue">Continue</button>
+				<div animated style="margin-top: 20px">
+					<button animated role="home--continue">Continue</button>
+				</div>
 			</section>
 			<section role="steps--select-token" step="select-token">
 				<form role="select-token--form">
 					<p>Select the token you would like to send</p>
 					<select role="select-token--select"> </select>
-					<button type="submit">Continue</button>
+					<button transition-target role="select-token--continue" type="submit">
+						Continue
+					</button>
 				</form>
 			</section>
 			<section role="steps--deposit-funds">
@@ -37,12 +41,7 @@
 					<p>
 						<a role="deposit-funds--address"></a>
 					</p>
-					<img
-						style="mix-blend-mode:screen; filter: invert(100%)"
-						width="300px"
-						role="deposit-funds--qrcode"
-						alt="QR Code"
-					/>
+					<img width="300px" role="deposit-funds--qrcode" alt="QR Code" />
 				</form>
 			</section>
 		</main>

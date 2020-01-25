@@ -4,7 +4,7 @@ import { AppService } from './services/AppService';
 import './app.scss';
 import { Erc20Data } from './utils/Erc20Data';
 import * as QRCode from 'qrcode';
-import { FlipAnimation } from './utils/FLIPAnimation';
+import { Transitions } from './utils/Transitions';
 
 const LOGO_IMAGE = require('./assets/logo.png').default;
 
@@ -30,6 +30,7 @@ const els = {
 	selectTokenStep: $`[role=steps--select-token]`,
 	selectTokenSelect: $`[role="select-token--select"]`,
 	selectTokenForm: $`[role="select-token--form"]`,
+	selectTokenContinue: $`[role="select-token--continue" ]`,
 	// DEPOSIT FUNDS
 	depositFundsStep: $`[role="steps--deposit-funds"]`,
 	depositFundsAddress: $`[role="deposit-funds--address"]`,
@@ -47,10 +48,15 @@ rootStore.addListener(async (state, action) => {
 					break;
 				}
 				case 'TOKEN_SELECT_STAGE': {
-					await FlipAnimation.fade(`[role="steps--home"] > *:not([animated])`);
-					await FlipAnimation.transition(
+					// await FlipAnimation.fade(`[role="steps--home"] > *:not([animated])`);
+					// await Transitions.freezeAll(`main > section > *`);
+					Transitions.FLIPWithTransform(
 						els.homeLogo as HTMLElement,
 						els.rootLogo as HTMLElement
+					);
+					Transitions.FLIPWithTransform(
+						els.homeContinue as HTMLElement,
+						els.selectTokenContinue as HTMLElement
 					);
 					activeStageEl = els.selectTokenStep;
 					break;
@@ -70,8 +76,10 @@ rootStore.addListener(async (state, action) => {
 
 // HOME
 
-els.homeContinue.addEventListener('click', () =>
-	rootStore.dispatch(['SET_TRANSFER_STAGE', 'TOKEN_SELECT_STAGE'])
+els.homeContinue.addEventListener(
+	'click',
+	() => rootStore.dispatch(['SET_TRANSFER_STAGE', 'TOKEN_SELECT_STAGE']),
+	{ once: true }
 );
 
 // SELECTING TOKEN
@@ -100,7 +108,11 @@ rootStore.addListener(async (state, action) => {
 			els.depositFundsQrCode.setAttribute(
 				'src',
 				await QRCode.toDataURL(etherURI, {
-					scale: 10
+					scale: 10,
+					color: {
+						light: '#0000', // Transparent background
+						dark: '#FAFAFA'
+					}
 				})
 			);
 			return;
@@ -118,6 +130,15 @@ rootStore.addListener(async (state, action) => {
 // Initializing DOM
 
 async function initalize() {
+	els.rootLogo.addEventListener(
+		'click',
+		() => {
+			rootStore.dispatch(['SET_TRANSFER_STAGE', 'HOME_STAGE']);
+		},
+		{
+			once: true
+		}
+	);
 	Erc20Data.tokens.forEach(token => {
 		const option = document.createElement('option');
 		option.setAttribute('value', token.name);

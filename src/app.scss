@@ -39,6 +39,7 @@ select {
 button {
 	text-transform: uppercase;
 	letter-spacing: 2px;
+	margin: 0;
 }
 
 body {
@@ -88,16 +89,39 @@ main {
 }
 
 main > section {
-	animation: fadeIn 450ms ease-in;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
 	height: 100%;
 	width: auto;
 	display: flex;
 	justify-content: center;
 	align-items: center;
 	flex-direction: column;
-	&:not([active]) {
-		display: none;
+	&[active] {
+		opacity: 0 !important;
+		animation: fadeIn 1000ms ease-in-out forwards;
+		animation-delay: 350ms;
 	}
+	&:not([active]) {
+		pointer-events: none;
+		*:not([animated]) {
+			transition: opacity 450ms ease;
+			opacity: 0;
+		}
+	}
+}
+main > section *:not([transition-target]) {
+	// transition: all 450ms;
+}
+main > section [transition-target],
+main [transition-target] {
+	opacity: 0;
+}
+
+div.spacer {
+	height: 10px;
 }
 
 [role='steps--home'] {
@@ -114,8 +138,5 @@ main > section {
 		font-size: 40px;
 		color: #ffffff;
 		letter-spacing: 0;
-	}
-	[role='home--continue'] {
-		margin-top: 20px;
 	}
 }
