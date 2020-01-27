@@ -24,6 +24,8 @@ body {
 }
 main {
 	color: white;
+	transition: height 1s ease;
+	transition-delay: 1s;
 }
 
 button,
@@ -70,6 +72,7 @@ img:not([src]) {
 }
 // App
 main {
+	animation: fadeIn 650ms ease-in-out forwards;
 	position: relative;
 	background-size: cover;
 	background-position: center;
@@ -148,5 +151,11 @@ div.spacer {
 		font-size: 40px;
 		color: #ffffff;
 		letter-spacing: 0;
+	}
+}
+
+[role='steps--deposit-funds'] {
+	img {
+		transition: opacity 250ms ease;
 	}
 }

@@ -8,7 +8,7 @@ The elegant way to pass down your fortune
 
 # 🇪🇬 Inspiration
 
-Sense and Sensibility by Jane Austen tells the whirlwind tale of inheritance strife amongst the fictional Dashwood family. Without spoiling the ending, it is safe to say that the Dashwoods make very poor decisions when it comes to writing wills. This project intends to be the first Dashwood that gets it right.
+_Sense and Sensibility_ by Jane Austen tells the whirlwind tale of inheritance strife amongst the fictional Dashwood family. Without spoiling the ending, it is safe to say that the Dashwoods make very poor decisions when it comes to writing wills. This project intends to be the first Dashwood that gets it right.
 
 <!-- # 🏊‍♀️ Product Deepdive -->
 

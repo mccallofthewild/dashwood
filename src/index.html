@@ -6,10 +6,6 @@
 		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
 		<title>Dashwood Inheritance</title>
 		<link rel="stylesheet" href="https://use.typekit.net/mul5jcy.css" />
-		<link
-			rel="stylesheet"
-			href="<%=htmlWebpackPlugin.files.chunks.main.css %>"
-		/>
 	</head>
 	<body>
 		<main>
@@ -30,7 +26,7 @@
 				<form animated role="select-token--form">
 					<p>Select the token you would like to send</p>
 					<select required role="select-token--select">
-						<option value="" disabled selected>Select token</option>
+						<option value="" disabled selected>Select ERC20 Token</option>
 					</select>
 					<button transition-target role="select-token--continue" type="submit">
 						Continue
@@ -61,6 +57,5 @@
 			</section>
 		</main>
 		<h1>Powered by Sablier</h1>
-		<script src="<%= htmlWebpackPlugin.files.chunks.main.entry %>"></script>
 	</body>
 </html>

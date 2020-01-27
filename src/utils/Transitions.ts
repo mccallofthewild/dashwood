@@ -17,7 +17,6 @@ export class Transitions {
 
 		toEl.style.opacity = '0';
 		fromEl.style.opacity = '1';
-		console.log(initStart);
 		let start = initStart;
 		const scaleX = end.width / initStart.width;
 		const scaleY = end.height / initStart.height;
@@ -38,9 +37,23 @@ export class Transitions {
 			scaleY,
 			translateY: (end.top - start.top) / scaleY,
 			translateX: (end.left - start.left) / scaleX,
-			duration: 1200,
+			duration: 1000,
 			easing: 'easeInOutQuad'
 		}).finished;
+		// await Promise.all([
+		// 	anime({
+		// 		targets: toEl,
+		// 		opacity: ['0', '1'],
+		// 		easing: 'linear',
+		// 		duration: 500
+		// 	}).finished,
+		// 	anime({
+		// 		targets: fromEl,
+		// 		opacity: ['1', '0'],
+		// 		easing: 'linear',
+		// 		duration: 500
+		// 	}).finished
+		// ]);
 		fromEl.style.opacity = '0';
 		toEl.style.opacity = '1';
 	}
