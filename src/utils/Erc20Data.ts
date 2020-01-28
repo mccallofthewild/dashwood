@@ -6,6 +6,7 @@ export interface ERC20TokenInfo {
 	erc20: true;
 	symbol: string;
 	decimals: number;
+	address?: string;
 }
 const Erc20TokensMap: {
 	[key: string]: ERC20TokenInfo;
@@ -18,7 +19,6 @@ const tokenImages = Object.fromEntries(
 		.keys()
 		.map(filename => [filename.replace('./', ''), context(filename).default])
 );
-console.log(tokenImages);
 
 const Erc20Tokens = Object.entries(Erc20TokensMap)
 	.map(([address, data]) => ({
@@ -35,7 +35,18 @@ const Erc20Tokens = Object.entries(Erc20TokensMap)
 		if (a == b) return 0;
 	});
 export class Erc20Data {
-	static get tokens() {
-		return Erc20Tokens;
+	static get tokens(): ERC20TokenInfo[] {
+		return process.env.NODE_ENV == 'development'
+			? [
+					{
+						name: 'XEENUS',
+						address: '0x022E292b44B5a146F2e8ee36Ff44D3dd863C915c',
+						erc20: true,
+						symbol: 'XEENUS',
+						decimals: 18,
+						logo: Erc20Tokens[0].logo
+					}
+			  ]
+			: Erc20Tokens;
 	}
 }

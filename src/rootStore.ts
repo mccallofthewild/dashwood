@@ -17,8 +17,10 @@ export type Action =
 	| ['SET_ERC20_CONTRACT', ERC20]
 	| ['SET_THROWAWAY_WALLET', Account]
 	| ['SET_THROWAWAY_WALLET_ETHER_BALANCE', string]
+	| ['SET_THROWAWAY_WALLET_ERC20_TOKEN_BALANCE', string]
 	| ['SET_TRANSFER_STAGE', TransferStage]
-	| ['SET_ERC20_TOKEN', ERC20TokenInfo];
+	| ['SET_ERC20_TOKEN', ERC20TokenInfo]
+	| ['MERGE_PERSISTED_STATE', { [key: string]: State[keyof State] }];
 
 export interface State {
 	web3?: Web3;
@@ -30,8 +32,22 @@ export interface State {
 	throwawayWallet?: Account;
 	transferStage: TransferStage;
 	erc20Token?: ERC20TokenInfo;
+	throwawayWalletERC20TokenBalance?: string;
 }
-
+function persist() {
+	const persistKey = 'store__persist';
+	const persisted = localStorage.getItem(persistKey);
+	if (persisted) {
+		try {
+			rootStore.dispatch(['MERGE_PERSISTED_STATE', JSON.parse(persisted)]);
+		} catch (e) {}
+	}
+	rootStore.addListener(({ erc20Token }) => {
+		const persistState = { erc20Token };
+		localStorage.setItem(persistKey, JSON.stringify(persistState));
+	});
+}
+setTimeout(persist, 1);
 export const rootStore = new Store<Action, State>(
 	(
 		state: State = {
@@ -42,6 +58,12 @@ export const rootStore = new Store<Action, State>(
 		action: Action = [null, null]
 	) => {
 		switch (action[0]) {
+			case 'MERGE_PERSISTED_STATE': {
+				return {
+					...state,
+					...action[1]
+				};
+			}
 			case 'SET_WEB3': {
 				return {
 					...state,
@@ -74,6 +96,12 @@ export const rootStore = new Store<Action, State>(
 				return {
 					...state,
 					throwawayWalletEtherBalance: action[1]
+				};
+			}
+			case 'SET_THROWAWAY_WALLET_ERC20_TOKEN_BALANCE': {
+				return {
+					...state,
+					throwawayWalletERC20TokenBalance: action[1]
 				};
 			}
 			case 'SET_TRANSFER_STAGE': {

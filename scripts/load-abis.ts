@@ -16,7 +16,7 @@ const loadABIFromAddress = async address => {
 };
 
 const CONTRACT_ABI_PATH = path.join(__dirname, '../contracts/abis');
-
+// ;
 (async () => {
 	fs.rmdirSync(CONTRACT_ABI_PATH, {
 		recursive: true

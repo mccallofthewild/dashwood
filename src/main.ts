@@ -11,15 +11,39 @@ const LOGO_IMAGE = require('./assets/logo.png').default;
 
 const service = new AppService();
 
-service.init().then(() => {
-	service.generateThrowawayWallet();
+let runCount = 0;
+rootStore.addListener(state => {
+	if (
+		state.throwawayWalletERC20TokenBalance > '0' &&
+		state.throwawayWalletEtherBalance > '0' &&
+		!runCount++
+	) {
+		service.initiateStreamFromThrowawayWallet();
+	}
 });
 
-const $ = (...args: [TemplateStringsArray, ...any[]]) => {
-	return document.querySelector(String.raw(...args));
+service.init().then(() => {
+	service.loadThrowawayWallet();
+});
+
+type ExtendedElement = Element &
+	HTMLElement & { on: (event: string, fn: Function) => void };
+
+const $ = (...args: [TemplateStringsArray, ...any[]]): ExtendedElement => {
+	const el: ExtendedElement = document.querySelector(String.raw(...args));
+	el.on = (event, fn) => {
+		el.addEventListener(event, (...args) => {
+			args[0].stopPropagation();
+			args[0].preventDefault();
+			fn(...args);
+		});
+	};
+	return el as ExtendedElement;
 };
 
-const els = {
+const els: {
+	[key: string]: ExtendedElement;
+} = {
 	// ROOT (APP LEVEL)
 	rootLogoContainer: $`[role='root--logo-container']`,
 	rootLogo: $`[role=root--logo]`,
@@ -38,10 +62,40 @@ const els = {
 	depositFundsQrCode: $`[role="deposit-funds--qrcode"]`,
 	depositFundsContinue: $`[role="deposit-funds--continue"]`,
 	depositFundsTokenName: $`[role="deposit-funds--token-name"]`
-} as const;
+};
+
+function decodeHtml(html) {
+	var txt = document.createElement('textarea');
+	txt.innerHTML = html;
+	return txt.value;
+}
+
+let renderTemplateElements = (state: State) => {
+	const stateful = document.querySelectorAll('[stateful]');
+	const elementsToTemplates = new Map<Element, string>();
+	function renderer(state: State) {
+		stateful.forEach(el => {
+			const template = elementsToTemplates.get(el) || decodeHtml(el.innerHTML);
+			elementsToTemplates.set(el, template);
+			try {
+				console.log(template);
+				el.innerHTML =
+					new Function(
+						`console.log(arguments); var state = arguments[0]; return ${template}`
+					)(state) || '';
+			} catch (e) {
+				el.innerHTML = '';
+				console.error(e);
+			}
+		});
+	}
+	renderTemplateElements = renderer;
+	return renderer(state);
+};
 
 // TRANSFER STAGE DOM REACTIONS
 rootStore.addListener(async (state, action) => {
+	renderTemplateElements(state);
 	switch (action[0]) {
 		case 'SET_TRANSFER_STAGE': {
 			let activeStageEl = els.homeStep;
@@ -88,42 +142,59 @@ rootStore.addListener(async (state, action) => {
 
 // HOME
 
-els.homeContinue.addEventListener(
-	'click',
-	() => rootStore.dispatch(['SET_TRANSFER_STAGE', 'TOKEN_SELECT_STAGE']),
-	{ once: true }
+els.homeContinue.on('click', () =>
+	rootStore.dispatch(['SET_TRANSFER_STAGE', 'TOKEN_SELECT_STAGE'])
 );
 
 // SELECTING TOKEN
 
-els.selectTokenSelect.addEventListener('change', () => {
+els.selectTokenSelect.on('change', () => {
 	const tokenName = ((els.selectTokenSelect as unknown) as any).value;
 	const selectedToken = Erc20Data.tokens.find(t => t.name == tokenName);
 	rootStore.dispatch(['SET_ERC20_TOKEN', selectedToken]);
 });
 
-els.selectTokenForm.addEventListener(
-	'submit',
-	() => rootStore.dispatch(['SET_TRANSFER_STAGE', 'DEPOSIT_STAGE']),
-	{
-		once: true
-	}
+els.selectTokenForm.on('submit', () =>
+	rootStore.dispatch(['SET_TRANSFER_STAGE', 'DEPOSIT_STAGE'])
 );
 
 // DEPOSITING FUNDS
 
-els.depositFundsContinue.addEventListener(
-	'click',
-	() => {
-		rootStore.dispatch(['SET_TRANSFER_STAGE', 'FINAL_STAGE']);
-	},
-	{
-		once: true
-	}
-);
+els.depositFundsContinue.on('click', () => {
+	rootStore.dispatch(['SET_TRANSFER_STAGE', 'FINAL_STAGE']);
+});
 
 rootStore.addListener(async (state, action) => {
+	console.log(action);
 	switch (action[0]) {
+		case 'SET_TRANSFER_STAGE': {
+			console.log('loading metamask client');
+			const metamask = await service.loadMetamaskClient();
+			console.log('loaded metamask client');
+			if (action[1] == 'DEPOSIT_STAGE') {
+				if (+state.throwawayWalletEtherBalance <= 0) {
+					const tx = {
+						to: state.throwawayWallet.address,
+						value: state.web3.utils
+							.toBN(5)
+							.mul(state.web3.utils.toBN(await state.web3.eth.getGasPrice()))
+							// .add(state.web3.utils.toBN(await transactionObject.estimateGas()))
+							.toString()
+					};
+					await metamask.sendTransaction(tx);
+				}
+				const erc20TransferTxObject = service.contracts.ERC20TokenContract.methods.transfer(
+					state.throwawayWallet.address,
+					1
+				);
+
+				await metamask.sendTransaction({
+					data: erc20TransferTxObject.encodeABI(),
+					to: state.erc20Token.address
+				});
+			}
+			break;
+		}
 		case 'SET_ERC20_TOKEN': {
 			els.depositFundsTokenName.innerHTML = action[1].name;
 			break;
@@ -148,7 +219,7 @@ rootStore.addListener(async (state, action) => {
 		}
 		case 'SET_THROWAWAY_WALLET_ETHER_BALANCE': {
 			if (+action[1]) {
-				els.depositFundsStep.removeAttribute('active');
+				// els.depositFundsStep.removeAttribute('active');
 				console.log('need to get erc20 token balance too');
 				console.log('need next step');
 			}
@@ -160,34 +231,49 @@ rootStore.addListener(async (state, action) => {
 // Initializing DOM
 
 async function initalize() {
-	els.rootLogo.addEventListener(
-		'click',
-		() => {
-			document.write('');
-			window.location.reload();
-			// rootStore.dispatch(['SET_TRANSFER_STAGE', 'HOME_STAGE']);
-		},
-		{
-			once: true
-		}
-	);
+	els.rootLogo.on('click', async () => {
+		await Transitions.anime
+			.timeline({
+				targets: 'main',
+				easing: 'easeInOutExpo',
+				// loop: true,
+				// direction: 'alternate',
+				duration: 450
+			})
+			.add({ targets: 'main *', opacity: 0 })
+			.add({
+				targets: 'main',
+				scaleY: 0.01,
+				scaleX: 1.25,
+				duration: 750,
+				easing: 'easeOutElastic(2, 1.2)'
+				// easing: 'easeOutElastic(amplitude (overshoot): 1-10, period (back & forths): 0.1-2)'
+				// easing: 'spring(mass, stiffness, damping, velocity)'
+			})
+			.add({
+				scaleX: 0.01,
+				scaleY: 0.01,
+				easing: 'easeOutElastic(2, 1.1)'
+			})
+			.add({
+				scaleX: 5,
+				scaleY: 0
+			}).finished;
+		document.write('');
+		window.location.reload();
+		// rootStore.dispatch(['SET_TRANSFER_STAGE', 'HOME_STAGE']);
+	});
 	Erc20Data.tokens.forEach(token => {
 		const option = document.createElement('option');
 		option.setAttribute('value', token.name);
 		option.innerHTML = token.name;
 		els.selectTokenSelect.appendChild(option);
 	});
-	document.querySelectorAll('form').forEach(f =>
-		f.addEventListener('submit', e => {
-			e.preventDefault();
-			console.log(f);
-			console.log('prevented default');
-		})
-	);
+
 	await Promise.all(
 		[els.homeLogo, els.rootLogo].map(el => {
 			return new Promise(r => {
-				el.addEventListener('load', r);
+				el.on('load', r);
 				el.setAttribute('src', LOGO_IMAGE);
 			});
 		})
