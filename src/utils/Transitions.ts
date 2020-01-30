@@ -54,7 +54,7 @@ export class Transitions {
 		// 		duration: 500
 		// 	}).finished
 		// ]);
-		fromEl.style.opacity = '0';
 		toEl.style.opacity = '1';
+		fromEl.style.opacity = '0';
 	}
 }

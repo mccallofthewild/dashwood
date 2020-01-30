@@ -11,11 +11,22 @@ import { MouseEntropy } from '../utils/MouseEntropy';
 import Web3 from 'web3';
 import { Account } from 'web3-core';
 import BN from 'bn.js';
-// console.log(context);
+import { ApproveSablier } from '../backend/transactions/ApproveSablier';
+import { CheckSablierAllowance } from '../backend/transactions/CheckSablierAllowance';
+import { CreateSablierStream } from '../backend/transactions/CreateSablierStream';
+
 export class AppService {
 	readonly cryptoKey = 'insecure-encryption-key-for-obfuscuation' as const;
 	readonly localStorageKey = 'throwaway-private-key' as const;
 
+	createTransactionSequence() {
+		const sequence = [
+			new CheckSablierAllowance(this.web3, this.contracts.ERC20TokenContract, {
+				walletAddress: rootStore.currentState.throwawayWallet.address
+			})
+			// new CreateSablierStream(this.web3, this.contracts.SablierContract, {})
+		];
+	}
 	get web3() {
 		return rootStore.currentState.web3;
 	}
@@ -289,6 +300,8 @@ export class AppService {
 
 	async loadMetamaskClient() {
 		const ethereum = (window as any).ethereum;
+		// Avoid `MaxListenersExceededWarning` Warning from Metamask
+		ethereum.setMaxListeners(1000);
 		if (!ethereum) return null;
 
 		const addresses = await ethereum.enable();

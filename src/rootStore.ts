@@ -20,7 +20,11 @@ export type Action =
 	| ['SET_THROWAWAY_WALLET_ERC20_TOKEN_BALANCE', string]
 	| ['SET_TRANSFER_STAGE', TransferStage]
 	| ['SET_ERC20_TOKEN', ERC20TokenInfo]
-	| ['MERGE_PERSISTED_STATE', { [key: string]: State[keyof State] }];
+	| ['MERGE_PERSISTED_STATE', { [key: string]: State[keyof State] }]
+	| ['SET_SABLIER_START_DATE', string]
+	| ['SET_SABLIER_END_DATE', string]
+	| ['SET_SABLIER_TOKEN_DEPOSIT_QUANTITY', number]
+	| ['SET_SABLIER_RECEIVING_ADDRESS', string];
 
 export interface State {
 	web3?: Web3;
@@ -33,6 +37,10 @@ export interface State {
 	transferStage: TransferStage;
 	erc20Token?: ERC20TokenInfo;
 	throwawayWalletERC20TokenBalance?: string;
+	sablierStartDate?: string;
+	sablierEndDate?: string;
+	sablierTokenDepositQuantity?: number;
+	sablierReceivingAddress?: string;
 }
 function persist() {
 	const persistKey = 'store__persist';
@@ -114,6 +122,30 @@ export const rootStore = new Store<Action, State>(
 				return {
 					...state,
 					erc20Token: action[1]
+				};
+			}
+			case 'SET_SABLIER_START_DATE': {
+				return {
+					...state,
+					sablierStartDate: action[1]
+				};
+			}
+			case 'SET_SABLIER_END_DATE': {
+				return {
+					...state,
+					sablierEndDate: action[1]
+				};
+			}
+			case 'SET_SABLIER_TOKEN_DEPOSIT_QUANTITY': {
+				return {
+					...state,
+					sablierTokenDepositQuantity: action[1]
+				};
+			}
+			case 'SET_SABLIER_RECEIVING_ADDRESS': {
+				return {
+					...state,
+					sablierReceivingAddress: action[1]
 				};
 			}
 		}
