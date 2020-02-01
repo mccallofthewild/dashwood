@@ -1,55 +1,275 @@
 import './polyfills';
-import { State, Action, rootStore } from './rootStore';
+import { State, Action, rootStore, TransferStage } from './rootStore';
 import { AppService } from './services/AppService';
-// import './app.scss';
+import './app.scss';
+import './settings.scss';
 import { Erc20Data } from './utils/Erc20Data';
 import * as QRCode from 'qrcode';
 import { Transitions } from './utils/Transitions';
-import Vue from 'vue';
-import { Home } from './pages/Home';
+import Vue from 'vue/dist/vue.esm.js';
+import Datepicker from 'vuejs-datepicker';
+import BigNumber from 'bignumber.js';
+import { TransactionWrapper } from './sablier/transactions/TransactionWrapper';
+
+const TREE_IMAGE = require('./assets/tree-plain.svg').default;
+const LOGO_IMAGE = require('./assets/logo.png').default;
+const service = new AppService();
+
+service.init().then(() => {
+	service.loadThrowawayWallet();
+});
+rootStore.addListener(console.log);
 
 export const $vm = new Vue({
 	el: '#app',
 	data() {
 		return {
+			service,
 			state: rootStore.currentState,
-			storeListener: null
+			storeListener: null,
+			images: {
+				throwawayWalletQrCodeUri: null,
+				LOGO_IMAGE,
+				TREE_IMAGE
+			},
+			totalEtherFee: null,
+			txSequenceCosts: null,
+			txSequence: null,
+			isRunningTxSequence: false
 		};
 	},
 	mounted() {
-		this.storeListener = state => {
-			this.state = state;
+		this.storeListener = (state: State, action: Action) => {
+			const __window = window as any;
+			__window.__isTransferring = __window.__isTransferring || false;
+			this.$set(this, 'state', state);
+			if (
+				!__window.__isTransferring &&
+				state.transferStage == 'DEPOSIT_STAGE' &&
+				state.throwawayWallet &&
+				state.throwawayWalletERC20TokenBalance &&
+				state.throwawayWalletWeiBalance
+			) {
+				__window.__isTransferring = true;
+				try {
+					this.transferFundsViaMetamask();
+				} catch (e) {}
+			}
+			if (this.etherAndTokenTransfersComplete) {
+				this.runTxSequence();
+			}
 		};
 		rootStore.addListener(this.storeListener);
-		vanilla();
+		// vanilla();
 	},
 	destroyed() {
 		rootStore.removeListener(this.storeListener);
 	},
+	methods: {
+		onHeaderLogoClick() {
+			rootStore.dispatch(['SET_TRANSFER_STAGE', 'HOME_STAGE']);
+		},
+		transferFundsViaMetamask() {
+			return service.transferFundsToThrowawayAddress();
+		},
+		submitSelectTokenForm() {
+			const isValidAddress = rootStore.currentState.web3.utils.isAddress(
+				rootStore.currentState.sablierReceivingAddress
+			);
+			if (!isValidAddress) {
+				return alert('Invalid Address!');
+			}
+			rootStore.dispatch(['SET_TRANSFER_STAGE', 'DEPOSIT_STAGE']);
+		},
+		continueFromHome: () =>
+			rootStore.dispatch(['SET_TRANSFER_STAGE', 'TOKEN_SELECT_STAGE']),
+
+		// SELECTING TOKEN
+		selectToken(e) {
+			console.log({ e });
+			const tokenName = e.target.value;
+			const selectedToken = Erc20Data.tokens.find(t => t.name == tokenName);
+			rootStore.dispatch(['SET_ERC20_TOKEN', selectedToken]);
+		},
+
+		// DEPOSITING FUNDS
+		continueFromDepositFunds() {
+			rootStore.dispatch(['SET_TRANSFER_STAGE', 'FINAL_STAGE']);
+		},
+
+		onReceiverAddressInput(e) {
+			if (service.web3.utils.isAddress(e.target.value.trim())) {
+				rootStore.dispatch(['SET_SABLIER_RECEIVING_ADDRESS', e.target.value]);
+			}
+		},
+
+		onTokenDepositQuantityInput(e) {
+			rootStore.dispatch([
+				'SET_SABLIER_TOKEN_DEPOSIT_QUANTITY',
+				e.target.value.toString()
+			]);
+		},
+
+		onStartDateInput(startDate) {
+			rootStore.dispatch(['SET_SABLIER_START_DATE', startDate.toISOString()]);
+		},
+		onEndDateInput(v) {
+			const endDate = v;
+			rootStore.dispatch(['SET_SABLIER_END_DATE', endDate.toISOString()]);
+		},
+		async updateTotalEtherFee() {
+			this.txSequence = await service.createTransactionSequence();
+			return service
+				.estimateTransactionSequenceCosts(this.txSequence)
+				.then(costObj => {
+					const totalWeiFee = costObj.totalFees.toString();
+					this.txSequenceCosts = costObj.allCosts;
+					this.totalEtherFee = rootStore.currentState.web3.utils.fromWei(
+						totalWeiFee
+					);
+					return null;
+				});
+		},
+		async runTxSequence() {
+			if (this.isRunningTxSequence) return;
+			this.isRunningTxSequence = true;
+			console.log('\n\n\n Running Transaction Sequence \n\n\n');
+			rootStore.dispatch(['SET_TRANSFER_STAGE', 'PROCESSING_SABLIER_STAGE']);
+			const sequence = this.txSequence as TransactionWrapper<any, any, any>[];
+			let currentTx: TransactionWrapper<any, any, any>;
+			try {
+				for (let index = 0; index < sequence.length; index++) {
+					const tx = sequence[index];
+					currentTx = tx;
+					const prices = this.txSequenceCosts[index];
+					console.log({ prices });
+					await tx.invokeTx(prices);
+				}
+			} catch (e) {
+				console.error(
+					/**/ `👇 Why ${
+						(currentTx as any).__proto__.constructor.name
+					} Transaction Failed: \n`,
+					e
+				);
+				alert(
+					'Sablier transaction failed! Open developer console for details.'
+				);
+				rootStore.dispatch(['SET_TRANSFER_STAGE', 'DEPOSIT_STAGE']);
+				this.isRunningTxSequence = false;
+				return;
+			}
+			rootStore.dispatch(['SET_TRANSFER_STAGE', 'SABLIER_SUCCESS_STAGE']);
+			this.isRunningTxSequence = false;
+		}
+	},
+	computed: {
+		tokenTransferIsComplete() {
+			const state = this.state as State;
+			const actualNeededBalance = service.calculateNearestValidSablierDepositAmount(
+				state.sablierHumanReadableTokenDepositQuantity,
+				new Date(state.sablierStartDate),
+				new Date(state.sablierEndDate),
+				state.erc20Token
+			);
+			const tokenBalance = state.throwawayWalletERC20TokenBalance;
+			return new BigNumber(actualNeededBalance).lte(
+				new BigNumber(tokenBalance)
+			);
+		},
+		etherTransferIsComplete() {
+			const state = this.state as State;
+			const actualNeededBalance = this.totalEtherFee;
+			const weiBalance = state.throwawayWalletWeiBalance;
+			if (!state.web3) return false;
+			if (!weiBalance) return false;
+			const etherBalance = state.web3.utils.fromWei(
+				state.web3.utils.toBN(weiBalance)
+			);
+			return new BigNumber(actualNeededBalance).lte(
+				new BigNumber(etherBalance)
+			);
+		},
+		etherAndTokenTransfersComplete() {
+			const etherTransferIsComplete = this.etherTransferIsComplete;
+			const tokenTransferIsComplete = this.tokenTransferIsComplete;
+			const allComplete = etherTransferIsComplete && tokenTransferIsComplete;
+			return allComplete;
+		},
+		startDateValue() {
+			return new Date(this.state.sablierStartDate);
+		},
+		endDateValue() {
+			return new Date(this.state.sablierEndDate);
+		},
+		minEndDate() {
+			const min = new Date(
+				new Date(this.state.sablierStartDate).getTime() + 60 * 60 * 1000 * 24
+			);
+			if (this.endDateValue < min) {
+				rootStore.dispatch(['SET_SABLIER_END_DATE', min.toISOString()]);
+			}
+			return min;
+		},
+		minStartDate() {
+			return new Date(new Date().getTime() + 60 * 60 * 1000);
+		}
+	},
+	watch: {
+		etherAndTokenTransfersComplete: {
+			immediate: true,
+			handler(allComplete: boolean, prevV: boolean) {
+				console.log({ allComplete, prevV, arguments });
+				if (allComplete) {
+					console.log('\n\n\n Running Transaction Sequence \n\n\n');
+					this.runTxSequence();
+				}
+			}
+		},
+		'state.transferStage': {
+			immediate: true,
+			async handler(v: TransferStage) {
+				if (v != 'DEPOSIT_STAGE') return;
+				await service.init();
+				this.updateTotalEtherFee();
+			}
+		},
+		'state.throwawayWallet': {
+			immediate: true,
+			async handler(v, prevV) {
+				if (!v || (prevV && v.address == prevV.address)) return;
+				await service.init();
+				this.updateTotalEtherFee();
+				const etherURI = `ethereum:${this.state.throwawayWallet.address}`;
+				this.images.throwawayWalletQrCodeUri = await QRCode.toDataURL(
+					etherURI,
+					{
+						scale: 10,
+						margin: 2,
+						color: {
+							light: '#ffffff21', // Transparent background
+							dark: '#FAFAFA'
+						}
+					}
+				);
+			}
+		}
+	},
 	components: {
-		Home
+		Datepicker
 	}
 });
 
-const TREE_IMAGE = require('./assets/tree-plain.svg').default;
-
-const LOGO_IMAGE = require('./assets/logo.png').default;
-
 function vanilla() {
-	const service = new AppService();
 	let runCount = 0;
 	rootStore.addListener(state => {
 		if (
 			state.throwawayWalletERC20TokenBalance > '0' &&
-			state.throwawayWalletEtherBalance > '0' &&
+			state.throwawayWalletWeiBalance > '0' &&
 			!runCount++
 		) {
 			// service.initiateStreamFromThrowawayWallet();
 		}
-	});
-
-	service.init().then(() => {
-		service.loadThrowawayWallet();
 	});
 
 	type ExtendedElement = Element &
@@ -155,57 +375,10 @@ function vanilla() {
 
 	// HOME
 
-	els.homeContinue.on('click', () =>
-		rootStore.dispatch(['SET_TRANSFER_STAGE', 'TOKEN_SELECT_STAGE'])
-	);
-
-	// SELECTING TOKEN
-
-	els.selectTokenSelect.on('change', () => {
-		const tokenName = ((els.selectTokenSelect as unknown) as any).value;
-		const selectedToken = Erc20Data.tokens.find(t => t.name == tokenName);
-		rootStore.dispatch(['SET_ERC20_TOKEN', selectedToken]);
-	});
-
-	els.selectTokenForm.on('submit', () =>
-		rootStore.dispatch(['SET_TRANSFER_STAGE', 'DEPOSIT_STAGE'])
-	);
-
-	// DEPOSITING FUNDS
-
-	els.depositFundsContinue.on('click', () => {
-		rootStore.dispatch(['SET_TRANSFER_STAGE', 'FINAL_STAGE']);
-	});
-
 	rootStore.addListener(async (state, action) => {
 		console.log(action);
 		switch (action[0]) {
 			case 'SET_TRANSFER_STAGE': {
-				console.log('loading metamask client');
-				const metamask = await service.loadMetamaskClient();
-				console.log('loaded metamask client');
-				if (action[1] == 'DEPOSIT_STAGE') {
-					if (+state.throwawayWalletEtherBalance <= 0) {
-						const tx = {
-							to: state.throwawayWallet.address,
-							value: state.web3.utils
-								.toBN(5)
-								.mul(state.web3.utils.toBN(await state.web3.eth.getGasPrice()))
-								// .add(state.web3.utils.toBN(await transactionObject.estimateGas()))
-								.toString()
-						};
-						await metamask.sendTransaction(tx);
-					}
-					const erc20TransferTxObject = service.contracts.ERC20TokenContract.methods.transfer(
-						state.throwawayWallet.address,
-						1
-					);
-
-					await metamask.sendTransaction({
-						data: erc20TransferTxObject.encodeABI(),
-						to: state.erc20Token.address
-					});
-				}
 				break;
 			}
 			case 'SET_ERC20_TOKEN': {
@@ -214,20 +387,7 @@ function vanilla() {
 			}
 			case 'SET_THROWAWAY_WALLET': {
 				if (!state.throwawayWallet) break;
-				const etherURI = /**/ `ethereum:${state.throwawayWallet.address}`;
-				els.depositFundsAddress.innerHTML = state.throwawayWallet.address;
-				els.depositFundsAddress.setAttribute('href', etherURI);
-				els.depositFundsQrCode.setAttribute(
-					'src',
-					await QRCode.toDataURL(etherURI, {
-						scale: 10,
-						margin: 2,
-						color: {
-							light: '#ffffff21', // Transparent background
-							dark: '#FAFAFA'
-						}
-					})
-				);
+
 				return;
 			}
 			case 'SET_THROWAWAY_WALLET_ETHER_BALANCE': {
@@ -241,56 +401,12 @@ function vanilla() {
 		}
 	});
 
-	els.receiverAddressInput.on('input', e => {
-		if (service.web3.utils.isAddress(e.target.value.trim())) {
-			rootStore.dispatch(['SET_SABLIER_RECEIVING_ADDRESS', e.target.value]);
-		}
-	});
-
-	function configureDateInputs() {
-		const formatDateForInput = (date: Date | string | number) =>
-			new Date(date).toISOString().split('T')[0];
-
-		function setDateInputValue(
-			inputEl: ExtendedElement,
-			date: Date | string | number
-		) {
-			// @ts-ignore
-			inputEl.value = formatDateForInput(date);
-		}
-		setDateInputValue(els.startDateInput, Date.now() + 60 * 60 * 1000 * 24);
-		setDateInputValue(els.endDateInput, Date.now() + 60 * 60 * 1000 * 24 * 2);
-		els.startDateInput.setAttribute(
-			'min',
-			formatDateForInput(new Date().getTime() + 60 * 60 * 1000 * 24)
-		);
-		els.startDateInput.on('input', e => {
-			const endDate = new Date(els.endDateInput.value);
-			const startDate = new Date(e.target.value);
-			rootStore.dispatch(['SET_SABLIER_START_DATE', startDate.toISOString()]);
-			const minEndDate = formatDateForInput(
-				startDate.getTime() + 60 * 60 * 1000 * 24
-			);
-			if (new Date(minEndDate).getTime() > endDate.getTime()) {
-				els.endDateInput.value = minEndDate;
-			}
-			els.endDateInput.setAttribute('min', minEndDate);
-		});
-		els.endDateInput.on('input', e => {
-			const endDate = new Date(e.target.value);
-			rootStore.dispatch(['SET_SABLIER_END_DATE', endDate.toISOString()]);
-		});
-	}
+	function configureDateInputs() {}
 	// Initializing DOM
 
 	async function initalize() {
 		configureDateInputs();
-		els.tokenDepositQuantityInput.on('input', e => {
-			rootStore.dispatch([
-				'SET_SABLIER_TOKEN_DEPOSIT_QUANTITY',
-				+e.target.value
-			]);
-		});
+
 		els.rootLogo.on('click', async () => {
 			await Transitions.anime
 				.timeline({

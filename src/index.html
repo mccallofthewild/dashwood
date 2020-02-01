@@ -7,93 +7,218 @@
 		<title>Dashwood Inheritance</title>
 		<link rel="stylesheet" href="https://use.typekit.net/mul5jcy.css" />
 		<style>
-			body {
+			/* body {
 				background: black;
 				color: white;
 				zoom: 1.3;
 			}
 			img {
 				width: 100px;
-			}
+			} */
 		</style>
 	</head>
 	<body>
 		<main id="app">
-			<div role="root--logo-container">
-				<img transition-target role="root--logo" alt="logo image" />
+			<div class="app-container">
+				<div class="app-container--overlay">
+					<div
+						:style="{ opacity: state.transferStage == 'HOME_STAGE' ? 0 : 1 }"
+						@click="onHeaderLogoClick"
+						role="root--logo-container"
+					>
+						<img
+							:src="images.LOGO_IMAGE"
+							transition-target
+							role="root--logo"
+							alt="logo image"
+						/>
+					</div>
+					<section
+						v-if="state.transferStage == 'HOME_STAGE'"
+						role="steps--home"
+						step="home"
+						active
+					>
+						<div animated role="home--logo-container">
+							<img
+								:src="images.LOGO_IMAGE"
+								role="home--logo"
+								alt="logo image"
+							/>
+						</div>
+						<p role="slogan">The elegant way to pass down your fortune</p>
+						<div animated style="margin-top: 20px">
+							<button @click="continueFromHome" animated role="home--continue">
+								Continue
+							</button>
+						</div>
+						<!-- <animated-tree-vector height="50"></animated-tree-vector> -->
+					</section>
+					<section
+						v-if="state.transferStage == 'TOKEN_SELECT_STAGE'"
+						role="steps--select-token"
+						step="select-token"
+					>
+						<form
+							animated
+							@submit.prevent="submitSelectTokenForm"
+							role="select-token--form"
+						>
+							<div>
+								<label for="select-token"
+									>Select the token you would like to pass down</label
+								>
+								<select
+									@change="selectToken"
+									name="select-token"
+									required
+									role="select-token--select"
+								>
+									<option value="" disabled :selected="!state.erc20Token"
+										>Select ERC20 Token</option
+									>
+									<option
+										v-for="token in state.erc20TokensList"
+										:value="token.name"
+										:selected="state.erc20Token && state.erc20Token.name == token.name"
+									>
+										{{ token.name }}
+									</option>
+								</select>
+							</div>
+							<div>
+								<label for="token-quantity"
+									>...and how much of it to send</label
+								>
+								<br />
+								<input
+									@input="onTokenDepositQuantityInput"
+									:value="state.sablierHumanReadableTokenDepositQuantity"
+									required
+									placeholder="e.g. 500"
+									type="number"
+									step="1"
+									name="token-quantity"
+									id="token-quantity-input"
+									min="0"
+									max="10e18"
+								/>
+							</div>
+							<div>
+								<label for="start-date">...and when to start sending it</label>
+								<datepicker
+									@input="onStartDateInput"
+									:value="startDateValue"
+									:disabled-dates="{ to: minStartDate }"
+									wrapper-class="datepicker-component--wrapper"
+									input-class="datepicker-component--input"
+									calendar-class="datepicker-component--calendar"
+								></datepicker>
+							</div>
+							<div class="end-date-form-section">
+								<label for="end-date">...and when to stop sending it</label>
+								<datepicker
+									@input="onEndDateInput"
+									:value="endDateValue"
+									:disabled-dates="{ to: minEndDate }"
+									wrapper-class="datepicker-component--wrapper"
+									input-class="datepicker-component--input"
+									calendar-class="datepicker-component--calendar"
+								></datepicker>
+							</div>
+							<div>
+								<label for="receiver-address">...and who to send it to</label>
+								<input
+									@input="onReceiverAddressInput"
+									:value="state.sablierReceivingAddress"
+									required
+									placeholder="HeirEthereumAddress"
+									type="text"
+									name="receiver-address"
+									id="receiver-address-input"
+								/>
+							</div>
+							<button
+								transition-target
+								role="select-token--continue"
+								type="submit"
+							>
+								Continue
+							</button>
+						</form>
+					</section>
+					<section
+						v-if="state.transferStage == 'DEPOSIT_STAGE'"
+						role="steps--deposit-funds"
+					>
+						<form animated role="deposit-funds--form">
+							<p>
+								Deposit
+								<br />
+								<span class="monospace uppercase">
+									{{ state.sablierHumanReadableTokenDepositQuantity }}
+								</span>
+								{{ state.erc20Token ? state.erc20Token.name : '' }} Tokens {{
+								tokenTransferIsComplete ? '✅' : '' }}
+								<br />
+								and
+								<span
+									:title="totalEtherFee"
+									class="monospace uppercase truncate"
+									style="width: 100px;"
+								>
+									{{ totalEtherFee || 'loading...' }}
+								</span>
+								ETH
+								<a
+									href="https://www.investopedia.com/terms/g/gas-ethereum.asp"
+									target="_blank"
+								>
+									Gas
+								</a>
+								{{ etherTransferIsComplete ? '✅' : '' }}
+								<br />
+								to this address:
+							</p>
+							<p>
+								<a class="monospace uppercase" role="deposit-funds--address">
+									{{ state.throwawayWallet && state.throwawayWallet.address }}
+								</a>
+							</p>
+							<img
+								:src="images.throwawayWalletQrCodeUri"
+								role="deposit-funds--qrcode"
+								alt="QR Code"
+								style="max-width: 200px;"
+							/>
+						</form>
+						<button @click="transferFundsViaMetamask">
+							Transfer via Metamask
+						</button>
+						<!-- <button
+							@click="continueFromDepositFunds"
+							transition-target
+							role="deposit-funds--continue"
+							type="submit"
+						>
+							Continue
+						</button> -->
+					</section>
+					<section v-if="state.transferStage == 'PROCESSING_SABLIER_STAGE'">
+						<h1>Processing Sablier Transaction...</h1>
+					</section>
+
+					<section v-if="state.transferStage == 'SABLIER_SUCCESS_STAGE'">
+						<h1>Sablier Transaction Successful!</h1>
+						<p>See it here: ETHERSCAN LINK HERE :)))))</p>
+					</section>
+				</div>
+
+				<h4>Private Key: (hover)</h4>
+				<div class="unblur-on-hover">
+					{{ state.throwawayWallet && state.throwawayWallet.privateKey }}
+				</div>
 			</div>
-			<Home />
-			<section role="steps--select-token" step="select-token">
-				<form animated role="select-token--form">
-					<div>
-						<label for="select-token"
-							>Select the token you would like to pass down</label
-						>
-						<select name="select-token" required role="select-token--select">
-							<option value="" disabled selected>Select ERC20 Token</option>
-						</select>
-					</div>
-					<div>
-						<label for="token-quantity">...and how much of it to send</label>
-						<input
-							required
-							placeholder="e.g. 500"
-							type="number"
-							name="token-quantity"
-							id="token-quantity-input"
-							min="1e-18"
-							max="10e18"
-						/>
-					</div>
-					<div>
-						<label for="start-date">...and when to start sending it</label>
-						<input
-							required
-							type="date"
-							name="start-date"
-							id="start-date-input"
-						/>
-					</div>
-					<div class="end-date-form-section">
-						<label for="end-date">...and when to stop sending it</label>
-						<input required type="date" name="end-date" id="end-date-input" />
-					</div>
-					<div>
-						<label for="receiver-address">...and who to send it to</label>
-						<input
-							required
-							placeholder="HeirEthereumAddress"
-							type="text"
-							name="receiver-address"
-							id="receiver-address-input"
-						/>
-					</div>
-					<button transition-target role="select-token--continue" type="submit">
-						Continue
-					</button>
-				</form>
-			</section>
-			<section role="steps--deposit-funds">
-				<form animated role="deposit-funds--form">
-					<p>
-						Deposit <span role="deposit-funds--token-name"></span> and
-						<a
-							href="https://www.investopedia.com/terms/g/gas-ethereum.asp"
-							target="_blank"
-						>
-							Ethereum gas
-						</a>
-						to this address:
-					</p>
-					<p>
-						<a role="deposit-funds--address"></a>
-					</p>
-					<img width="200px" role="deposit-funds--qrcode" alt="QR Code" />
-				</form>
-				<button transition-target role="deposit-funds--continue" type="submit">
-					Continue
-				</button>
-			</section>
 		</main>
 		<h1>Powered by Sablier</h1>
 	</body>

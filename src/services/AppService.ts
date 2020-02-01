@@ -11,35 +11,171 @@ import { MouseEntropy } from '../utils/MouseEntropy';
 import Web3 from 'web3';
 import { Account } from 'web3-core';
 import BN from 'bn.js';
-import { ApproveSablier } from '../backend/transactions/ApproveSablier';
-import { CheckSablierAllowance } from '../backend/transactions/CheckSablierAllowance';
-import { CreateSablierStream } from '../backend/transactions/CreateSablierStream';
+import { ApproveSablier } from '../sablier/transactions/ApproveSablier';
+import { CheckSablierAllowance } from '../sablier/transactions/CheckSablierAllowance';
+import { CreateSablierStream } from '../sablier/transactions/CreateSablierStream';
+import {
+	TransactionWrapper,
+	TransactionPrices
+} from '../sablier/transactions/TransactionWrapper';
+import { ERC20TokenInfo } from '../utils/Erc20Data';
+import BigNumber from 'bignumber.js';
+BigNumber.config({ EXPONENTIAL_AT: 100 });
 
 export class AppService {
 	readonly cryptoKey = 'insecure-encryption-key-for-obfuscuation' as const;
 	readonly localStorageKey = 'throwaway-private-key' as const;
 
-	createTransactionSequence() {
-		const sequence = [
-			new CheckSablierAllowance(this.web3, this.contracts.ERC20TokenContract, {
+	async transferFundsToThrowawayAddress() {
+		const service = this;
+		const state = rootStore.currentState;
+		console.log('loading metamask client');
+		const metamask = await service.loadMetamaskClient();
+		const { totalFees } = await this.estimateTransactionSequenceCosts(
+			await this.createTransactionSequence()
+		);
+		console.log('loaded metamask client');
+		if (new BN(state.throwawayWalletWeiBalance).lt(totalFees)) {
+			const weiToSend = totalFees.sub(new BN(state.throwawayWalletWeiBalance));
+			const tx = {
+				to: state.throwawayWallet.address,
+				value: weiToSend.toString()
+			};
+			await metamask.sendTransaction(tx);
+		}
+		const machineReadableTokenQuantity = this.calculateMachineReadableTokenQuantity(
+			rootStore.currentState.sablierHumanReadableTokenDepositQuantity,
+			rootStore.currentState.erc20Token.decimals
+		);
+		if (
+			new BN(state.throwawayWalletERC20TokenBalance).lt(
+				new BN(machineReadableTokenQuantity)
+			)
+		) {
+			const tokensToSend = new BN(machineReadableTokenQuantity)
+				.sub(new BN(state.throwawayWalletERC20TokenBalance))
+				.toString();
+			const erc20TransferTxObject = service.contracts.ERC20TokenContract.methods.transfer(
+				state.throwawayWallet.address,
+				tokensToSend
+			);
+			await metamask.sendTransaction({
+				data: erc20TransferTxObject.encodeABI(),
+				to: state.erc20Token.address
+			});
+		}
+	}
+	async estimateTransactionSequenceCosts(
+		sequence: TransactionWrapper<any, any, any>[]
+	) {
+		// const sequence = await this.createTransactionSequence();
+		let totalGas: BN = new BN(0);
+		let totalFees: BN = new BN(0);
+		// to speed up transactions
+		const gasPriceModifier = 5;
+		const gasPriceIntStr = await this.web3.eth.getGasPrice();
+		const gasPriceModified = new BigNumber(gasPriceIntStr)
+			.multipliedBy(new BigNumber(gasPriceModifier))
+			.toString();
+		const gasPrice = new BN(gasPriceModified);
+		const allCosts: TransactionPrices[] = [];
+		for (let tx of sequence) {
+			const costs = await tx.estimateTxCosts({
+				gasPrice
+			});
+			allCosts.push({
+				gas: costs.gas.toString(),
+				gasPrice: costs.gasPrice.toString()
+			});
+			totalGas = totalGas.add(costs.gas);
+			totalFees = totalGas.add(costs.fee);
+		}
+		return {
+			allCosts,
+			totalFees,
+			totalGas,
+			gasPrice
+		};
+	}
+	async createTransactionSequence() {
+		const startDateTimeUnix = this.dateToUnix(
+			new Date(rootStore.currentState.sablierStartDate)
+		);
+		const endDateTimeUnix = this.dateToUnix(
+			new Date(rootStore.currentState.sablierEndDate)
+		);
+		const sablierTokenDepositQuantity = this.calculateNearestValidSablierDepositAmount(
+			rootStore.currentState.sablierHumanReadableTokenDepositQuantity,
+			new Date(startDateTimeUnix * 1000),
+			new Date(endDateTimeUnix * 1000),
+			rootStore.currentState.erc20Token
+		);
+		const sablierAllowance = await new CheckSablierAllowance(
+			this.web3,
+			this.contracts.ERC20TokenContract,
+			{
 				walletAddress: rootStore.currentState.throwawayWallet.address
+			}
+		).invokeTx();
+		const amountToApprove = new BN(sablierTokenDepositQuantity).sub(
+			new BN(sablierAllowance)
+		);
+		const needsApproval = amountToApprove.gte(new BN(0));
+		console.log({ needsApproval });
+		console.log({ amountToApprove: amountToApprove.toString() });
+		let sequence = [
+			...(needsApproval
+				? [
+						new ApproveSablier(this.web3, this.contracts.ERC20TokenContract, {
+							amountOfTokenToApprove: sablierTokenDepositQuantity,
+							fromAddress: rootStore.currentState.throwawayWallet.address
+						})
+				  ]
+				: []),
+			new CreateSablierStream(this.web3, this.contracts.SablierContract, {
+				startDateTimeUnix,
+				endDateTimeUnix,
+				recipientAddress: rootStore.currentState.sablierReceivingAddress,
+				fromAddress: rootStore.currentState.throwawayWallet.address,
+				tokenQuantity: sablierTokenDepositQuantity,
+				tokenContractAddress: rootStore.currentState.erc20Token.address
 			})
-			// new CreateSablierStream(this.web3, this.contracts.SablierContract, {})
 		];
+		return sequence;
+	}
+	calculateMachineReadableTokenQuantity(
+		humanReadableTokenQuantity: string | number,
+		decimals: string | number
+	): string {
+		return new BigNumber(humanReadableTokenQuantity)
+			.multipliedBy(new BigNumber(10).pow(new BigNumber(decimals)))
+			.toFixed(0);
+	}
+	calculateHumanReadableTokenQuantity(
+		machineReadableTokenQuantity: string | number,
+		decimals: string | number
+	): string {
+		return new BigNumber(machineReadableTokenQuantity)
+			.div(new BigNumber(10).pow(new BigNumber(decimals)))
+			.toString();
 	}
 	get web3() {
 		return rootStore.currentState.web3;
 	}
 
 	async init() {
-		MouseEntropy.start();
-		const web3 = await this.loadWeb3();
-		rootStore.dispatch(['SET_WEB3', web3]);
-		this.liveUpdatethrowawayWalletBalance();
+		const promise = (async () => {
+			MouseEntropy.start();
+			const web3 = await this.loadWeb3();
+			rootStore.dispatch(['SET_WEB3', web3]);
+			this.liveUpdatethrowawayWalletBalance();
+		})();
+		this.init = () => promise;
+		return promise;
 	}
 
 	get humanReadableEtherBalance() {
-		const balance = rootStore.currentState.throwawayWalletEtherBalance;
+		const balance = rootStore.currentState.throwawayWalletWeiBalance;
 		return balance == '0'
 			? '0'
 			: [
@@ -68,12 +204,16 @@ export class AppService {
 			try {
 				const parsedWallet = JSON.parse(storedEncryptedWalletRaw);
 				return this.web3.eth.accounts.decrypt(parsedWallet, this.cryptoKey);
-			} catch (e) {}
+			} catch (e) {
+				debugger;
+			}
+			debugger;
 		}
+		debugger;
 		return null;
 	}
 	tryGenerateWallet(): Account {
-		const throwawayWallet = rootStore.currentState.web3.eth.accounts.create(
+		const throwawayWallet = this.web3.eth.accounts.create(
 			this.web3.utils.randomHex(32) + MouseEntropy.entropy
 		);
 		const obsfucatedAccount = this.web3.eth.accounts.encrypt(
@@ -87,7 +227,11 @@ export class AppService {
 		return throwawayWallet;
 	}
 	loadThrowawayWallet() {
-		let account = this.tryLoadWalletFromStorage() || this.tryGenerateWallet();
+		let account = this.tryLoadWalletFromStorage();
+		if (!account) {
+			debugger;
+			account = this.tryGenerateWallet();
+		}
 		this.web3.eth.accounts.wallet.add(account);
 		rootStore.dispatch(['SET_THROWAWAY_WALLET', account]);
 	}
@@ -127,7 +271,7 @@ export class AppService {
 				const balance = await rootStore.currentState.web3.eth.getBalance(
 					rootStore.currentState.throwawayWallet.address
 				);
-				if (balance != rootStore.currentState.throwawayWalletEtherBalance) {
+				if (balance != rootStore.currentState.throwawayWalletWeiBalance) {
 					rootStore.dispatch(['SET_THROWAWAY_WALLET_ETHER_BALANCE', balance]);
 				}
 			}
@@ -153,7 +297,7 @@ export class AppService {
 		}
 		setTimeout(() => {
 			this.liveUpdatethrowawayWalletBalance();
-		}, 5000);
+		}, 3000);
 	}
 
 	async requiredPrompt(
@@ -205,12 +349,12 @@ export class AppService {
 		recipientAddress: string,
 		startDateTime: Date,
 		endDateTime: Date,
-		tokenQuantity: string | number
+		machineReadableTokenQuantity: string | number
 	): Promise<void> {
 		const state = rootStore.currentState;
 		const transactionObject = await this.contracts.SablierContract.methods.createStream(
 			recipientAddress,
-			tokenQuantity,
+			machineReadableTokenQuantity,
 			state.erc20Token.address,
 			this.dateToUnix(startDateTime),
 			this.dateToUnix(endDateTime)
@@ -244,15 +388,22 @@ export class AppService {
 
 	/** https://docs.sablier.finance/streams#the-deposit-gotcha */
 	calculateNearestValidSablierDepositAmount(
-		tokenQuantity: string,
+		humanReadableTokenQuantity: string,
 		startDateTime: Date,
-		endDateTime: Date
-	) {
-		const timeDelta =
-			this.dateToUnix(endDateTime) - this.dateToUnix(startDateTime);
-		return new BN(tokenQuantity)
-			.sub(new BN(tokenQuantity).mod(new BN(timeDelta)))
-			.toString();
+		endDateTime: Date,
+		token: ERC20TokenInfo
+	): string {
+		const formattedTokenQuantity = this.calculateMachineReadableTokenQuantity(
+			humanReadableTokenQuantity,
+			token.decimals
+		);
+		const timeDelta = new BigNumber(this.dateToUnix(endDateTime)).minus(
+			new BigNumber(this.dateToUnix(startDateTime))
+		);
+		const rawValidAmount = new BigNumber(formattedTokenQuantity).minus(
+			new BigNumber(formattedTokenQuantity).mod(new BigNumber(timeDelta))
+		);
+		return rawValidAmount.toFixed(0);
 	}
 
 	async initiateStreamFromThrowawayWallet() {
@@ -285,9 +436,10 @@ export class AppService {
 		const startDateTime = new Date(startDateTimeStr);
 		const endDateTime = new Date(endDateTimeStr);
 		const depositAmount = this.calculateNearestValidSablierDepositAmount(
-			state.throwawayWalletERC20TokenBalance,
+			state.sablierHumanReadableTokenDepositQuantity,
 			startDateTime,
-			endDateTime
+			endDateTime,
+			rootStore.currentState.erc20Token
 		);
 		await this.createSablierStream(
 			recipientAddress,
@@ -301,7 +453,7 @@ export class AppService {
 	async loadMetamaskClient() {
 		const ethereum = (window as any).ethereum;
 		// Avoid `MaxListenersExceededWarning` Warning from Metamask
-		ethereum.setMaxListeners(1000);
+		ethereum.setMaxListeners(100000);
 		if (!ethereum) return null;
 
 		const addresses = await ethereum.enable();

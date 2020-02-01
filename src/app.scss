@@ -26,7 +26,7 @@ datalist {
 body {
 	color: black;
 }
-main {
+.app-container {
 	color: white;
 	transition: height 1s ease;
 	transition-delay: 1s;
@@ -43,7 +43,9 @@ main {
 
 button,
 input,
-select {
+select,
+.datepicker-component--input {
+	box-sizing: content-box !important;
 	font-size: 2rem;
 	width: var(--action-item--width);
 	padding: var(--action-item--padding-vertical)
@@ -81,6 +83,7 @@ select {
 	);
 }
 input,
+.datepicker-component--input,
 select {
 	border-radius: 0px !important;
 	border-bottom: 2px solid white;
@@ -123,19 +126,36 @@ img:not([src]) {
 		opacity: 1;
 	}
 }
+
 // App
-main {
+.app-container {
 	animation: fadeIn 650ms ease-in-out forwards;
 	position: relative;
 	background-size: cover;
 	background-position: center;
 	background-repeat: no-repeat;
-	background-image: url('assets/background.png');
+	background-image: url('assets/backgrounds/background.png');
 	width: 100%;
 	height: 100vh;
 	margin: 5vh 0px;
 	border-radius: 8px;
+	overflow: hidden;
 	text-align: center;
+	&--overlay {
+		position: relative;
+		width: 100%;
+		height: 100%;
+		background-image: radial-gradient(
+			50% 183%,
+			rgba(0, 0, 0, 0.5) 50%,
+			#000000 100%
+		);
+		background-image: radial-gradient(
+			80% 77%,
+			rgba(0, 0, 0, 0.5) 0%,
+			#000000 100%
+		);
+	}
 }
 
 .d-inline {
@@ -157,7 +177,7 @@ main {
 	}
 }
 
-main > section {
+.app-container section {
 	z-index: 1;
 	position: absolute;
 	top: 0;
@@ -174,20 +194,17 @@ main > section {
 		animation: fadeIn 1000ms ease-in-out forwards;
 		animation-delay: 350ms;
 	}
-	&:not([active]) {
-		pointer-events: none;
-		*:not([animated]) {
-			transition: opacity 450ms ease;
-			opacity: 0;
-		}
+	*:not([animated]) {
+		transition: opacity 450ms ease;
+		// opacity: 0;
 	}
 }
-main > section *:not([transition-target]) {
-	// transition: all 450ms;
-}
-main > section[transition-in] [transition-target] {
-	opacity: 0;
-}
+// .app-container > section *:not([transition-target]) {
+// 	// transition: all 450ms;
+// }
+// .app-container > section[transition-in] [transition-target] {
+// 	opacity: 0;
+// }
 
 div.spacer {
 	height: 10px;

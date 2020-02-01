@@ -1,0 +1,48 @@
+body .datepicker-component {
+	&--wrapper {
+		color: black !important;
+		text-align: inherit !important;
+		.cell.day {
+			&.disabled {
+				opacity: 0.5;
+			}
+			&.selected {
+				color: white;
+				background: black;
+			}
+		}
+	}
+	&--calendar {
+		color: black;
+		width: 100% !important;
+		border: none !important;
+		box-shadow: 0px 5px 15px rgba(black, 0.2);
+	}
+	&--input {
+	}
+}
+
+.unblur-on-hover {
+	filter: blur(5px);
+	transition: filter 450ms ease;
+	&:hover {
+		filter: blur(0px);
+	}
+}
+
+.monospace {
+	font-family: monospace;
+	font-size: 0.75em;
+	line-height: 0.75em;
+}
+
+.uppercase {
+	text-transform: uppercase;
+}
+
+.truncate {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	display: inline-block;
+}

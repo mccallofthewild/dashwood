@@ -12,13 +12,17 @@ const Erc20TokensMap: {
 	[key: string]: ERC20TokenInfo;
 } = _Erc20TokensMap;
 
-// @ts-ignore
-const context = require.context('eth-contract-metadata/images', false);
-const tokenImages = Object.fromEntries(
-	context
-		.keys()
-		.map(filename => [filename.replace('./', ''), context(filename).default])
-);
+let tokenImages = {};
+
+if (process.env.NODE_ENV != 'test') {
+	// @ts-ignore
+	const context = require.context('eth-contract-metadata/images', false);
+	const tokenImages = Object.fromEntries(
+		context
+			.keys()
+			.map(filename => [filename.replace('./', ''), context(filename).default])
+	);
+}
 
 const Erc20Tokens = Object.entries(Erc20TokensMap)
 	.map(([address, data]) => ({

@@ -4,12 +4,14 @@ import { Sablier } from '../contracts/types/Sablier';
 import { ERC20 } from '../contracts/types/ERC20';
 import { Account } from 'web3-core/types';
 import { AppService } from './services/AppService';
-import { ERC20TokenInfo } from './utils/Erc20Data';
+import { ERC20TokenInfo, Erc20Data } from './utils/Erc20Data';
 
-type TransferStage =
+export type TransferStage =
 	| 'HOME_STAGE'
 	| 'TOKEN_SELECT_STAGE'
 	| 'DEPOSIT_STAGE'
+	| 'PROCESSING_SABLIER_STAGE'
+	| 'SABLIER_SUCCESS_STAGE'
 	| 'FINAL_STAGE';
 export type Action =
 	| ['SET_WEB3', Web3]
@@ -23,7 +25,7 @@ export type Action =
 	| ['MERGE_PERSISTED_STATE', { [key: string]: State[keyof State] }]
 	| ['SET_SABLIER_START_DATE', string]
 	| ['SET_SABLIER_END_DATE', string]
-	| ['SET_SABLIER_TOKEN_DEPOSIT_QUANTITY', number]
+	| ['SET_SABLIER_TOKEN_DEPOSIT_QUANTITY', string]
 	| ['SET_SABLIER_RECEIVING_ADDRESS', string];
 
 export interface State {
@@ -32,15 +34,17 @@ export interface State {
 		sablier?: Sablier;
 		erc20?: ERC20;
 	};
-	throwawayWalletEtherBalance?: string;
+	throwawayWalletWeiBalance?: string;
 	throwawayWallet?: Account;
 	transferStage: TransferStage;
 	erc20Token?: ERC20TokenInfo;
 	throwawayWalletERC20TokenBalance?: string;
 	sablierStartDate?: string;
 	sablierEndDate?: string;
-	sablierTokenDepositQuantity?: number;
+	sablierHumanReadableTokenDepositQuantity?: string;
 	sablierReceivingAddress?: string;
+
+	erc20TokensList: typeof Erc20Data.tokens;
 }
 function persist() {
 	const persistKey = 'store__persist';
@@ -50,18 +54,37 @@ function persist() {
 			rootStore.dispatch(['MERGE_PERSISTED_STATE', JSON.parse(persisted)]);
 		} catch (e) {}
 	}
-	rootStore.addListener(({ erc20Token }) => {
-		const persistState = { erc20Token };
-		localStorage.setItem(persistKey, JSON.stringify(persistState));
-	});
+	rootStore.addListener(
+		({
+			erc20Token,
+			sablierEndDate,
+			sablierStartDate,
+			sablierReceivingAddress,
+			sablierHumanReadableTokenDepositQuantity,
+			transferStage
+		}) => {
+			const persistState = {
+				erc20Token,
+				sablierEndDate,
+				sablierStartDate,
+				sablierReceivingAddress,
+				sablierHumanReadableTokenDepositQuantity,
+				transferStage
+			};
+			localStorage.setItem(persistKey, JSON.stringify(persistState));
+		}
+	);
 }
-setTimeout(persist, 1);
+setTimeout(persist, 0.001);
 export const rootStore = new Store<Action, State>(
 	(
 		state: State = {
 			web3: null,
 			contracts: {},
-			transferStage: 'HOME_STAGE'
+			transferStage: 'HOME_STAGE',
+			sablierStartDate: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+			sablierEndDate: new Date(Date.now() + 60 * 60 * 1000 * 24).toISOString(),
+			erc20TokensList: Erc20Data.tokens
 		} as const,
 		action: Action = [null, null]
 	) => {
@@ -103,7 +126,7 @@ export const rootStore = new Store<Action, State>(
 			case 'SET_THROWAWAY_WALLET_ETHER_BALANCE': {
 				return {
 					...state,
-					throwawayWalletEtherBalance: action[1]
+					throwawayWalletWeiBalance: action[1]
 				};
 			}
 			case 'SET_THROWAWAY_WALLET_ERC20_TOKEN_BALANCE': {
@@ -139,7 +162,7 @@ export const rootStore = new Store<Action, State>(
 			case 'SET_SABLIER_TOKEN_DEPOSIT_QUANTITY': {
 				return {
 					...state,
-					sablierTokenDepositQuantity: action[1]
+					sablierHumanReadableTokenDepositQuantity: action[1]
 				};
 			}
 			case 'SET_SABLIER_RECEIVING_ADDRESS': {

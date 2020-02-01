@@ -33,6 +33,7 @@
 		"qrcode": "^1.4.4",
 		"regenerator-runtime": "^0.13.3",
 		"vue": "^2.6.11",
+		"vuejs-datepicker": "^1.6.2",
 		"web3": "^1.2.5-rc.0",
 		"web3-core": "^1.2.5-rc.0",
 		"web3-eth-contract": "^1.2.5-rc.0"
