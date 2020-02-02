@@ -19,7 +19,11 @@
 	</head>
 	<body>
 		<main id="app">
-			<div class="app-container">
+			<div
+				style="visibility:hidden;"
+				:style="{ visibility: 'visible' }"
+				class="app-container"
+			>
 				<div class="app-container--overlay">
 					<!-- :style="{ opacity: state.transferStage == 'HOME_STAGE' ? 0 : 1 }" -->
 					<div @click="onHeaderLogoClick" role="root--logo-container">

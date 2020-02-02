@@ -9,62 +9,67 @@ if (process.env.NODE_ENV != 'test') {
 	backgroundImages = context.keys().map(filename => context(filename).default);
 }
 
-backgroundImages.forEach(src => fetch(src));
+backgroundImages.forEach(src => {
+	const el = document.createElement('img');
+	el.setAttribute('src', src);
+});
 
 rootStore.addListener((state, action) => {
 	if (action[0] != 'SET_TRANSFER_STAGE') return;
 	console.log(els.appContainer);
-	backgroundImages.push(backgroundImages.shift());
+	backgroundImages.unshift(backgroundImages.pop());
 	setTimeout(() => {
 		Transitions.anime.set(els.appContainer, {
-			backgroundImage: backgroundImages.map(img => `url(${img})`).join(',')
+			backgroundImage: backgroundImages
+				.slice(0, 2)
+				.map(img => `url(${img})`)
+				.join(','),
+			backgroundColor: 'black'
 		});
-	}, 400);
+	}, 500);
 });
 
-const defaultTransition: Transition = {
-	duration: 1000,
-	async beforeEnter() {
+class TransitionHandler {
+	static duration: 1000;
+	static async beforeEnter() {
 		console.log('beforeEnter', arguments);
-	},
-	async enter(el, done) {
+	}
+	static async enter(el, done) {
 		done();
 		console.log('enter', arguments);
-	},
-	async afterEnter() {
+	}
+	static async afterEnter() {
 		console.log('afterenter', arguments);
-	},
-	async enterCancelled() {
+	}
+	static async enterCancelled() {
 		console.log('after cancel', arguments);
-	},
-	async beforeLeave() {
+	}
+	static async beforeLeave() {
 		console.log('before leave', arguments);
-	},
-	async leave(el, done) {
+	}
+	static async leave(el, done) {
 		done();
 		console.log('leave', arguments);
-	},
-	async afterLeave() {
+	}
+	static async afterLeave() {
 		console.log('after leave', arguments);
-	},
-	async leaveCancelled() {
+	}
+	static async leaveCancelled() {
 		console.log('leave cancelled', arguments);
 	}
-};
-
+}
 export const TransferStageTransitions: {
-	readonly [Stage in TransferStage]: Transition;
+	readonly [Stage in TransferStage]: TransitionHandler;
 } = {
-	HOME_STAGE: {
-		...defaultTransition,
-		async enter(el, done) {
-			const prev = rootStore.currentState.prevTransferStage;
+	HOME_STAGE: class extends TransitionHandler {
+		static async beforeEnter() {}
+		static async enter(el, done) {
 			await Transitions.FLIP(
 				els.rootLogo as HTMLElement,
 				els.homeLogo as HTMLElement
 			);
-		},
-		async leave(el, done) {
+		}
+		static async leave(el, done) {
 			const transitions = [];
 			if (rootStore.currentState.transferStage == 'TOKEN_SELECT_STAGE') {
 				transitions.push(
@@ -91,35 +96,16 @@ export const TransferStageTransitions: {
 			done();
 		}
 	},
-	TOKEN_SELECT_STAGE: {
-		...defaultTransition,
-		async enter(el, done) {
+	TOKEN_SELECT_STAGE: class extends TransitionHandler {
+		static async enter(el, done) {
 			done();
 			console.log('entering!!!');
 		}
 	},
-	DEPOSIT_STAGE: {
-		...defaultTransition
-	},
-	PROCESSING_SABLIER_STAGE: {
-		...defaultTransition
-	},
-	SABLIER_SUCCESS_STAGE: {
-		...defaultTransition
-	}
+	DEPOSIT_STAGE: TransitionHandler,
+	PROCESSING_SABLIER_STAGE: TransitionHandler,
+	SABLIER_SUCCESS_STAGE: TransitionHandler
 } as const;
-
-interface Transition {
-	duration: number;
-	beforeEnter(): Promise<void>;
-	enter(el: HTMLElement, done: () => void): Promise<void>;
-	afterEnter(): Promise<void>;
-	enterCancelled(): Promise<void>;
-	beforeLeave(): Promise<void>;
-	leave(el: HTMLElement, done: () => void): Promise<void>;
-	afterLeave(): Promise<void>;
-	leaveCancelled(): Promise<void>;
-}
 
 const els = {
 	get appContainer() {

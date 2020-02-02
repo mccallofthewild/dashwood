@@ -84,7 +84,7 @@ export const $vm = new Vue({
 					);
 					if (receipt && receipt.status) {
 						this.throwawayWalletSablierTxHash = event.transactionHash;
-						rootStore.dispatch(['SET_TRANSFER_STAGE', 'SABLIER_SUCCESS_STAGE']);
+						// rootStore.dispatch(['SET_TRANSFER_STAGE', 'SABLIER_SUCCESS_STAGE']);
 					}
 				});
 		});
