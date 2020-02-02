@@ -9,6 +9,8 @@ if (process.env.NODE_ENV != 'test') {
 	backgroundImages = context.keys().map(filename => context(filename).default);
 }
 
+backgroundImages.forEach(src => fetch(src));
+
 rootStore.addListener((state, action) => {
 	if (action[0] != 'SET_TRANSFER_STAGE') return;
 	console.log(els.appContainer);
