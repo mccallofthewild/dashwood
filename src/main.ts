@@ -10,16 +10,44 @@ import Vue from 'vue/dist/vue.esm.js';
 import Datepicker from 'vuejs-datepicker';
 import BigNumber from 'bignumber.js';
 import { TransactionWrapper } from './sablier/transactions/TransactionWrapper';
+import { EventData } from 'web3-eth-contract';
+import { TransferStageTransitions } from './TransferStageTransitions';
 
 const TREE_IMAGE = require('./assets/tree-plain.svg').default;
 const LOGO_IMAGE = require('./assets/logo.png').default;
 const service = new AppService();
 
+const Settings = {
+	AUTO_RUN_TX_SEQUENCE: false,
+	AUTO_TRANSFER_FUNDS_FROM_METAMASK: false
+} as const;
+
 service.init().then(() => {
 	service.loadThrowawayWallet();
 });
 rootStore.addListener(console.log);
-
+Vue.component('transfer-stage-transition', {
+	template: `
+		<transition
+			appear
+			name="transfer-stage"
+			mode="out-in"
+			:duration="{ enter: transitionOptions.duration, leave: transitionOptions.duration }"
+			v-bind:css="true"
+			v-on:before-enter="transitionOptions.beforeEnter"
+			v-on:enter="transitionOptions.enter"
+			v-on:after-enter="transitionOptions.afterEnter"
+			v-on:enter-cancelled="transitionOptions.enterCancelled"
+			v-on:before-leave="transitionOptions.beforeLeave"
+			v-on:leave="transitionOptions.leave"
+			v-on:after-leave="transitionOptions.afterLeave"
+			v-on:leave-cancelled="transitionOptions.leaveCancelled"
+		>
+			<slot></slot>
+		</transition>
+	`,
+	props: ['transition-options']
+});
 export const $vm = new Vue({
 	el: '#app',
 	data() {
@@ -35,15 +63,38 @@ export const $vm = new Vue({
 			totalEtherFee: null,
 			txSequenceCosts: null,
 			txSequence: null,
-			isRunningTxSequence: false
+			isRunningTxSequence: false,
+			throwawayWalletSablierTxHash: null,
+			TransferStageTransitions
 		};
 	},
 	mounted() {
+		service.init().then(() => {
+			const state = rootStore.currentState;
+			service.contracts.SablierContract.events
+				.CreateStream({
+					filter: {
+						sender: state.throwawayWallet.address
+					},
+					fromBlock: 0
+				})
+				.on('data', async event => {
+					const receipt = await state.web3.eth.getTransactionReceipt(
+						event.transactionHash
+					);
+					if (receipt && receipt.status) {
+						this.throwawayWalletSablierTxHash = event.transactionHash;
+						rootStore.dispatch(['SET_TRANSFER_STAGE', 'SABLIER_SUCCESS_STAGE']);
+					}
+				});
+		});
 		this.storeListener = (state: State, action: Action) => {
+			this.$set(this, 'state', state);
+			console.log('set state!', state, action);
 			const __window = window as any;
 			__window.__isTransferring = __window.__isTransferring || false;
-			this.$set(this, 'state', state);
 			if (
+				Settings.AUTO_TRANSFER_FUNDS_FROM_METAMASK &&
 				!__window.__isTransferring &&
 				state.transferStage == 'DEPOSIT_STAGE' &&
 				state.throwawayWallet &&
@@ -55,7 +106,10 @@ export const $vm = new Vue({
 					this.transferFundsViaMetamask();
 				} catch (e) {}
 			}
-			if (this.etherAndTokenTransfersComplete) {
+			if (
+				Settings.AUTO_RUN_TX_SEQUENCE &&
+				this.etherAndTokenTransfersComplete
+			) {
 				this.runTxSequence();
 			}
 		};
@@ -81,8 +135,10 @@ export const $vm = new Vue({
 			}
 			rootStore.dispatch(['SET_TRANSFER_STAGE', 'DEPOSIT_STAGE']);
 		},
-		continueFromHome: () =>
-			rootStore.dispatch(['SET_TRANSFER_STAGE', 'TOKEN_SELECT_STAGE']),
+		continueFromHome() {
+			rootStore.dispatch(['SET_TRANSFER_STAGE', 'TOKEN_SELECT_STAGE']);
+			console.log('continuing from home!');
+		},
 
 		// SELECTING TOKEN
 		selectToken(e) {
@@ -90,11 +146,6 @@ export const $vm = new Vue({
 			const tokenName = e.target.value;
 			const selectedToken = Erc20Data.tokens.find(t => t.name == tokenName);
 			rootStore.dispatch(['SET_ERC20_TOKEN', selectedToken]);
-		},
-
-		// DEPOSITING FUNDS
-		continueFromDepositFunds() {
-			rootStore.dispatch(['SET_TRANSFER_STAGE', 'FINAL_STAGE']);
 		},
 
 		onReceiverAddressInput(e) {
@@ -118,6 +169,7 @@ export const $vm = new Vue({
 			rootStore.dispatch(['SET_SABLIER_END_DATE', endDate.toISOString()]);
 		},
 		async updateTotalEtherFee() {
+			await service.init();
 			this.txSequence = await service.createTransactionSequence();
 			return service
 				.estimateTransactionSequenceCosts(this.txSequence)
@@ -164,18 +216,30 @@ export const $vm = new Vue({
 		}
 	},
 	computed: {
+		enterTransition() {
+			const state: State = this.state;
+			return TransferStageTransitions[state.transferStage];
+		},
+		leaveTransition() {
+			const state: State = this.state;
+			return TransferStageTransitions[state.prevTransferStage];
+		},
 		tokenTransferIsComplete() {
-			const state = this.state as State;
-			const actualNeededBalance = service.calculateNearestValidSablierDepositAmount(
-				state.sablierHumanReadableTokenDepositQuantity,
-				new Date(state.sablierStartDate),
-				new Date(state.sablierEndDate),
-				state.erc20Token
-			);
-			const tokenBalance = state.throwawayWalletERC20TokenBalance;
-			return new BigNumber(actualNeededBalance).lte(
-				new BigNumber(tokenBalance)
-			);
+			try {
+				const state = this.state as State;
+				const actualNeededBalance = service.calculateNearestValidSablierDepositAmount(
+					state.sablierHumanReadableTokenDepositQuantity,
+					new Date(state.sablierStartDate),
+					new Date(state.sablierEndDate),
+					state.erc20Token
+				);
+				const tokenBalance = state.throwawayWalletERC20TokenBalance;
+				return new BigNumber(actualNeededBalance).lte(
+					new BigNumber(tokenBalance)
+				);
+			} catch (e) {
+				return false;
+			}
 		},
 		etherTransferIsComplete() {
 			const state = this.state as State;
@@ -220,8 +284,7 @@ export const $vm = new Vue({
 			immediate: true,
 			handler(allComplete: boolean, prevV: boolean) {
 				console.log({ allComplete, prevV, arguments });
-				if (allComplete) {
-					console.log('\n\n\n Running Transaction Sequence \n\n\n');
+				if (Settings.AUTO_RUN_TX_SEQUENCE && allComplete) {
 					this.runTxSequence();
 				}
 			}
@@ -273,7 +336,10 @@ function vanilla() {
 	});
 
 	type ExtendedElement = Element &
-		HTMLElement & { value: any; on: (event: string, fn: Function) => void };
+		HTMLElement & {
+			value: any;
+			on: (event: string, fn: Function) => void;
+		};
 
 	const $ = (...args: [TemplateStringsArray, ...any[]]): ExtendedElement => {
 		const el: ExtendedElement = document.querySelector(String.raw(...args));
@@ -312,20 +378,6 @@ function vanilla() {
 		receiverAddressInput: $`#receiver-address-input`
 	};
 
-	class Transition {
-		constructor(
-			public fromRoot: ExtendedElement,
-			public toRoot: ExtendedElement
-		) {}
-		protected beforeStart() {
-			this.fromRoot.setAttribute('transitioning-from', 'true');
-			this.toRoot.setAttribute('transitioning-to', 'true');
-		}
-		protected afterEnd() {
-			this.fromRoot.setAttribute('transitioning-from', 'true');
-			this.toRoot.setAttribute('transitioning-to', 'true');
-		}
-	}
 	// TRANSFER STAGE DOM REACTIONS
 	rootStore.addListener(async (state, action) => {
 		console.log(state, action);
@@ -338,14 +390,6 @@ function vanilla() {
 						break;
 					}
 					case 'TOKEN_SELECT_STAGE': {
-						Transitions.FLIP(
-							els.homeLogo as HTMLElement,
-							els.rootLogo as HTMLElement
-						);
-						Transitions.FLIP(
-							els.homeContinue as HTMLElement,
-							els.selectTokenContinue as HTMLElement
-						);
 						activeStageEl = els.selectTokenStep;
 						break;
 					}
@@ -362,8 +406,6 @@ function vanilla() {
 						activeStageEl = els.depositFundsStep;
 						break;
 					}
-					case 'FINAL_STAGE': {
-					}
 				}
 				[els.homeStep, els.depositFundsStep, els.selectTokenStep].forEach(el =>
 					el.removeAttribute('active')
@@ -374,147 +416,4 @@ function vanilla() {
 	});
 
 	// HOME
-
-	rootStore.addListener(async (state, action) => {
-		console.log(action);
-		switch (action[0]) {
-			case 'SET_TRANSFER_STAGE': {
-				break;
-			}
-			case 'SET_ERC20_TOKEN': {
-				els.depositFundsTokenName.innerHTML = action[1].name;
-				break;
-			}
-			case 'SET_THROWAWAY_WALLET': {
-				if (!state.throwawayWallet) break;
-
-				return;
-			}
-			case 'SET_THROWAWAY_WALLET_ETHER_BALANCE': {
-				if (+action[1]) {
-					// els.depositFundsStep.removeAttribute('active');
-					console.log('need to get erc20 token balance too');
-					console.log('need next step');
-				}
-				break;
-			}
-		}
-	});
-
-	function configureDateInputs() {}
-	// Initializing DOM
-
-	async function initalize() {
-		configureDateInputs();
-
-		els.rootLogo.on('click', async () => {
-			await Transitions.anime
-				.timeline({
-					targets: 'main',
-					easing: 'easeInOutExpo',
-					// loop: true,
-					// direction: 'alternate',
-					duration: 450
-				})
-				.add({ targets: 'main *', opacity: 0 })
-				.add({
-					targets: 'main',
-					scaleY: 0.01,
-					scaleX: 1.25,
-					duration: 750,
-					easing: 'easeOutElastic(2, 1.2)'
-					// easing: 'easeOutElastic(amplitude (overshoot): 1-10, period (back & forths): 0.1-2)'
-					// easing: 'spring(mass, stiffness, damping, velocity)'
-				})
-				.add({
-					scaleX: 0.01,
-					scaleY: 0.01,
-					easing: 'easeOutElastic(2, 1.1)'
-				})
-				.add({
-					scaleX: 5,
-					scaleY: 0
-				}).finished;
-			document.write('');
-			window.location.reload();
-			// rootStore.dispatch(['SET_TRANSFER_STAGE', 'HOME_STAGE']);
-		});
-		Erc20Data.tokens.forEach(token => {
-			const option = document.createElement('option');
-			option.setAttribute('value', token.name);
-			option.innerHTML = token.name;
-			els.selectTokenSelect.appendChild(option);
-		});
-
-		await Promise.all(
-			[els.homeLogo, els.rootLogo].map(el => {
-				return new Promise(r => {
-					el.on('load', r);
-					el.setAttribute('src', LOGO_IMAGE);
-				});
-			})
-		);
-	}
-	initalize();
-
-	if (!window.customElements.get('animated-tree-vector'))
-		window.customElements.define(
-			'animated-tree-vector',
-			class extends HTMLElement {
-				constructor() {
-					super();
-					const shadow = this.attachShadow({
-						mode: 'closed'
-					});
-					shadow.innerHTML += `
-					<style>
-						svg, html {
-							height: inherit;
-							width: inherit;
-						}
-					</style>
-				`;
-					fetch(TREE_IMAGE)
-						.then(res => res.text())
-						.then(async vectorImage => {
-							shadow.innerHTML += vectorImage;
-							const anime = Transitions.anime;
-							const mainTrunkPaths = shadow.querySelectorAll(
-								'svg path.main-trunk-path'
-							);
-							mainTrunkPaths.forEach((el: HTMLElement) => {
-								el.style.strokeDasharray = '10000';
-								el.style.strokeDashoffset = '10000';
-							});
-							const leafPaths = shadow.querySelectorAll(
-								'svg g.leaf-path-group path'
-							);
-							leafPaths.forEach((el: HTMLElement) => {
-								el.style.strokeDasharray = '5000';
-								el.style.strokeDashoffset = '5000';
-							});
-							let total = 0;
-							anime({
-								targets: mainTrunkPaths,
-								strokeDashoffset: 5000,
-								easing: 'linear',
-								duration: 10000,
-								// direction: 'alternate',
-								// loop: true,
-								autoplay: true
-							}).finished;
-							anime({
-								delay: 6000,
-								targets: leafPaths,
-								strokeDashoffset: 4500,
-								easing: 'linear',
-								duration: 20000,
-								// direction: 'alternate',
-								// loop: true,
-								autoplay: true
-							}).finished;
-						});
-				}
-			}
-		);
 }

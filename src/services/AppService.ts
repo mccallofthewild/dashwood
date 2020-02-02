@@ -168,6 +168,7 @@ export class AppService {
 			MouseEntropy.start();
 			const web3 = await this.loadWeb3();
 			rootStore.dispatch(['SET_WEB3', web3]);
+			this.loadThrowawayWallet();
 			this.liveUpdatethrowawayWalletBalance();
 		})();
 		this.init = () => promise;
@@ -265,7 +266,7 @@ export class AppService {
 		};
 	}
 
-	async liveUpdatethrowawayWalletBalance() {
+	async updateThrowawayWalletBalance() {
 		try {
 			if (rootStore.currentState.throwawayWallet) {
 				const balance = await rootStore.currentState.web3.eth.getBalance(
@@ -295,9 +296,12 @@ export class AppService {
 		} catch (e) {
 			console.error(e);
 		}
-		setTimeout(() => {
-			this.liveUpdatethrowawayWalletBalance();
-		}, 3000);
+	}
+	async liveUpdatethrowawayWalletBalance() {
+		while (true) {
+			this.updateThrowawayWalletBalance();
+			await new Promise(r => setTimeout(r, 3000));
+		}
 	}
 
 	async requiredPrompt(
@@ -453,10 +457,10 @@ export class AppService {
 	async loadMetamaskClient() {
 		const ethereum = (window as any).ethereum;
 		// Avoid `MaxListenersExceededWarning` Warning from Metamask
-		ethereum.setMaxListeners(100000);
 		if (!ethereum) return null;
 
 		const addresses = await ethereum.enable();
+		ethereum.setMaxListeners(1000);
 		const instance = this;
 		return {
 			/** Returns Transaction Hash */
@@ -498,6 +502,7 @@ export class AppService {
 			window.addEventListener('load', async () => {
 				const { web3 }: { web3: Web3 } = window as any;
 				const addresses = await (window as any).ethereum.enable();
+				(window as any).ethereum.setMaxListeners(1000);
 				const instance = new Web3(
 					(window as any).ethereum || web3.currentProvider
 				);

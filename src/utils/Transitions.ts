@@ -56,5 +56,11 @@ export class Transitions {
 		// ]);
 		toEl.style.opacity = '1';
 		fromEl.style.opacity = '0';
+		anime.set(fromEl, {
+			scaleX: 1,
+			scaleY: 1,
+			translateY: 0,
+			translateX: 0
+		});
 	}
 }

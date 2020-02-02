@@ -11,8 +11,7 @@ export type TransferStage =
 	| 'TOKEN_SELECT_STAGE'
 	| 'DEPOSIT_STAGE'
 	| 'PROCESSING_SABLIER_STAGE'
-	| 'SABLIER_SUCCESS_STAGE'
-	| 'FINAL_STAGE';
+	| 'SABLIER_SUCCESS_STAGE';
 export type Action =
 	| ['SET_WEB3', Web3]
 	| ['SET_SABLIER_CONTRACT', Sablier]
@@ -37,6 +36,7 @@ export interface State {
 	throwawayWalletWeiBalance?: string;
 	throwawayWallet?: Account;
 	transferStage: TransferStage;
+	prevTransferStage?: TransferStage;
 	erc20Token?: ERC20TokenInfo;
 	throwawayWalletERC20TokenBalance?: string;
 	sablierStartDate?: string;
@@ -138,7 +138,8 @@ export const rootStore = new Store<Action, State>(
 			case 'SET_TRANSFER_STAGE': {
 				return {
 					...state,
-					transferStage: action[1]
+					transferStage: action[1],
+					prevTransferStage: state.transferStage
 				};
 			}
 			case 'SET_ERC20_TOKEN': {

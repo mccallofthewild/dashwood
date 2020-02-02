@@ -21,11 +21,8 @@
 		<main id="app">
 			<div class="app-container">
 				<div class="app-container--overlay">
-					<div
-						:style="{ opacity: state.transferStage == 'HOME_STAGE' ? 0 : 1 }"
-						@click="onHeaderLogoClick"
-						role="root--logo-container"
-					>
+					<!-- :style="{ opacity: state.transferStage == 'HOME_STAGE' ? 0 : 1 }" -->
+					<div @click="onHeaderLogoClick" role="root--logo-container">
 						<img
 							:src="images.LOGO_IMAGE"
 							transition-target
@@ -33,28 +30,40 @@
 							alt="logo image"
 						/>
 					</div>
-					<section
-						v-if="state.transferStage == 'HOME_STAGE'"
-						role="steps--home"
-						step="home"
-						active
+					<transfer-stage-transition
+						:transition-options="TransferStageTransitions['HOME_STAGE']"
 					>
-						<div animated role="home--logo-container">
-							<img
-								:src="images.LOGO_IMAGE"
-								role="home--logo"
-								alt="logo image"
-							/>
-						</div>
-						<p role="slogan">The elegant way to pass down your fortune</p>
-						<div animated style="margin-top: 20px">
-							<button @click="continueFromHome" animated role="home--continue">
-								Continue
-							</button>
-						</div>
-						<!-- <animated-tree-vector height="50"></animated-tree-vector> -->
-					</section>
+						<section
+							key="HOME_STAGE"
+							v-if="state.transferStage == 'HOME_STAGE'"
+							role="steps--home"
+							step="home"
+							active
+						>
+							<div animated role="home--logo-container">
+								<img
+									animated
+									:src="images.LOGO_IMAGE"
+									role="home--logo"
+									alt="logo image"
+								/>
+							</div>
+							<p role="slogan">The elegant way to pass down your fortune</p>
+							<div animated style="margin-top: 20px">
+								<button
+									@click="continueFromHome"
+									animated
+									role="home--continue"
+								>
+									Continue
+								</button>
+							</div>
+							<!-- <animated-tree-vector height="50"></animated-tree-vector> -->
+						</section>
+					</transfer-stage-transition>
+
 					<section
+						key="TOKEN_SELECT_STAGE"
 						v-if="state.transferStage == 'TOKEN_SELECT_STAGE'"
 						role="steps--select-token"
 						step="select-token"
@@ -148,6 +157,7 @@
 						</form>
 					</section>
 					<section
+						key="DEPOSIT_STAGE"
 						v-if="state.transferStage == 'DEPOSIT_STAGE'"
 						role="steps--deposit-funds"
 					>
@@ -158,16 +168,18 @@
 								<span class="monospace uppercase">
 									{{ state.sablierHumanReadableTokenDepositQuantity }}
 								</span>
-								{{ state.erc20Token ? state.erc20Token.name : '' }} Tokens {{
-								tokenTransferIsComplete ? '✅' : '' }}
+								{{ tokenTransferIsComplete ? '0' : state.erc20Token ?
+								state.erc20Token.name : '' }} Tokens {{ tokenTransferIsComplete
+								? '✅' : '🚫' }}
 								<br />
 								and
 								<span
 									:title="totalEtherFee"
 									class="monospace uppercase truncate"
-									style="width: 100px;"
+									style="max-width: 100px;"
 								>
-									{{ totalEtherFee || 'loading...' }}
+									{{ etherTransferIsComplete ? '0' : totalEtherFee ||
+									'loading...' }}
 								</span>
 								ETH
 								<a
@@ -176,7 +188,7 @@
 								>
 									Gas
 								</a>
-								{{ etherTransferIsComplete ? '✅' : '' }}
+								{{ etherTransferIsComplete ? '✅' : '🚫' }}
 								<br />
 								to this address:
 							</p>
@@ -195,32 +207,47 @@
 						<button @click="transferFundsViaMetamask">
 							Transfer via Metamask
 						</button>
-						<!-- <button
-							@click="continueFromDepositFunds"
-							transition-target
-							role="deposit-funds--continue"
-							type="submit"
-						>
-							Continue
-						</button> -->
 					</section>
-					<section v-if="state.transferStage == 'PROCESSING_SABLIER_STAGE'">
+					<section
+						key="PROCESSING_SABLIER_STAGE"
+						v-if="state.transferStage == 'PROCESSING_SABLIER_STAGE'"
+					>
 						<h1>Processing Sablier Transaction...</h1>
 					</section>
 
-					<section v-if="state.transferStage == 'SABLIER_SUCCESS_STAGE'">
+					<section
+						key="SABLIER_SUCCESS_STAGE"
+						v-if="state.transferStage == 'SABLIER_SUCCESS_STAGE'"
+					>
 						<h1>Sablier Transaction Successful!</h1>
-						<p>See it here: ETHERSCAN LINK HERE :)))))</p>
+						<p>
+							See it here:
+							<a
+								class="truncate"
+								style="width: 400px;"
+								target="_blank"
+								rel="noopener noreferrer"
+								:href="'https://kovan.etherscan.io/tx/' + throwawayWalletSablierTxHash"
+								>{{ 'https://kovan.etherscan.io/tx/' +
+								throwawayWalletSablierTxHash }}
+							</a>
+						</p>
 					</section>
 				</div>
-
-				<h4>Private Key: (hover)</h4>
-				<div class="unblur-on-hover">
-					{{ state.throwawayWallet && state.throwawayWallet.privateKey }}
-				</div>
+			</div>
+			<h4>Private Key: (hover)</h4>
+			<div class="unblur-on-hover">
+				{{ state.throwawayWallet && state.throwawayWallet.privateKey }}
 			</div>
 		</main>
-		<h1>Powered by <a href="https://sablier.finance" rel="noopener noreferrer" target="_blank">Sablier</a></h1>
-		<script src="<%= htmlWebpackPlugin.files.chunks.main.entry %>"></script>
+		<h1>
+			Powered by
+			<a
+				href="https://sablier.finance"
+				rel="noopener noreferrer"
+				target="_blank"
+				>Sablier</a
+			>
+		</h1>
 	</body>
 </html>

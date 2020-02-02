@@ -189,22 +189,23 @@ img:not([src]) {
 	justify-content: center;
 	align-items: center;
 	flex-direction: column;
-	&[active] {
-		opacity: 0 !important;
-		animation: fadeIn 1000ms ease-in-out forwards;
-		animation-delay: 350ms;
-	}
-	*:not([animated]) {
-		transition: opacity 450ms ease;
-		// opacity: 0;
+	opacity: 0 !important;
+	animation: fadeIn 1000ms ease-in-out forwards;
+	animation-delay: 350ms;
+
+	&.transfer-stage-leave-to {
+		*:not([animated]) {
+			transition: opacity 450ms ease;
+			opacity: 0 !important;
+		}
 	}
 }
-// .app-container > section *:not([transition-target]) {
-// 	// transition: all 450ms;
-// }
-// .app-container > section[transition-in] [transition-target] {
-// 	opacity: 0;
-// }
+.app-container > section *:not([transition-target]) {
+	transition: all 450ms;
+}
+.app-container > section.transfer-stage-enter [transition-target] {
+	opacity: 0;
+}
 
 div.spacer {
 	height: 10px;
