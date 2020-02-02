@@ -1,6 +1,25 @@
 import { TransferStage, rootStore } from './rootStore';
 import { Transitions } from './utils/Transitions';
 
+let backgroundImages = [];
+
+if (process.env.NODE_ENV != 'test') {
+	// @ts-ignore
+	const context = require.context('./assets/backgrounds', false);
+	backgroundImages = context.keys().map(filename => context(filename).default);
+}
+
+rootStore.addListener((state, action) => {
+	if (action[0] != 'SET_TRANSFER_STAGE') return;
+	console.log(els.appContainer);
+	backgroundImages.push(backgroundImages.shift());
+	setTimeout(() => {
+		Transitions.anime.set(els.appContainer, {
+			backgroundImage: backgroundImages.map(img => `url(${img})`).join(',')
+		});
+	}, 400);
+});
+
 const defaultTransition: Transition = {
 	duration: 1000,
 	async beforeEnter() {
@@ -101,6 +120,9 @@ interface Transition {
 }
 
 const els = {
+	get appContainer() {
+		return document.querySelector('.app-container');
+	},
 	// ROOT (APP LEVEL)
 	get rootLogoContainer() {
 		return document.querySelector(`[role='root--logo-container']`);

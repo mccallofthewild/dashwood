@@ -95,6 +95,28 @@
 									</option>
 								</select>
 							</div>
+							<div style="display: inline-block;">
+								<label for="start-date">...and when to start sending it</label>
+								<datepicker
+									@input="onStartDateInput"
+									:value="startDateValue"
+									:disabled-dates="{ to: minStartDate }"
+									wrapper-class="datepicker-component--wrapper"
+									input-class="datepicker-component--input"
+									calendar-class="datepicker-component--calendar"
+								></datepicker>
+							</div>
+							<div style="display: inline-block;" class="end-date-form-section">
+								<label for="end-date">...and when to stop sending it</label>
+								<datepicker
+									@input="onEndDateInput"
+									:value="endDateValue"
+									:disabled-dates="{ to: minEndDate }"
+									wrapper-class="datepicker-component--wrapper"
+									input-class="datepicker-component--input"
+									calendar-class="datepicker-component--calendar"
+								></datepicker>
+							</div>
 							<div>
 								<label for="token-quantity"
 									>...and how much of it to send</label
@@ -113,28 +135,7 @@
 									max="10e18"
 								/>
 							</div>
-							<div>
-								<label for="start-date">...and when to start sending it</label>
-								<datepicker
-									@input="onStartDateInput"
-									:value="startDateValue"
-									:disabled-dates="{ to: minStartDate }"
-									wrapper-class="datepicker-component--wrapper"
-									input-class="datepicker-component--input"
-									calendar-class="datepicker-component--calendar"
-								></datepicker>
-							</div>
-							<div class="end-date-form-section">
-								<label for="end-date">...and when to stop sending it</label>
-								<datepicker
-									@input="onEndDateInput"
-									:value="endDateValue"
-									:disabled-dates="{ to: minEndDate }"
-									wrapper-class="datepicker-component--wrapper"
-									input-class="datepicker-component--input"
-									calendar-class="datepicker-component--calendar"
-								></datepicker>
-							</div>
+
 							<div>
 								<label for="receiver-address">...and who to send it to</label>
 								<input

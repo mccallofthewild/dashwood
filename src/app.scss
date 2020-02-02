@@ -48,6 +48,9 @@ select,
 	box-sizing: content-box !important;
 	font-size: 2rem;
 	width: var(--action-item--width);
+	&.datepicker-component--input {
+		width: calc(var(--action-item--width) / 2);
+	}
 	padding: var(--action-item--padding-vertical)
 		var(--action-item--padding-horizontal);
 	background-color: rgba(255, 255, 255, 0.13);
@@ -102,7 +105,7 @@ button {
 }
 
 label {
-	text-align: left;
+	text-align: center;
 	display: block;
 }
 
@@ -129,14 +132,15 @@ img:not([src]) {
 
 // App
 .app-container {
+	transition: background-image 450ms ease;
 	animation: fadeIn 650ms ease-in-out forwards;
 	position: relative;
 	background-size: cover;
-	background-position: center;
+	background-position: center center;
 	background-repeat: no-repeat;
-	background-image: url('assets/backgrounds/background.png');
+	background-image: url('assets/backgrounds/1-background.png');
 	width: 100%;
-	height: 100vh;
+	height: 90vh;
 	margin: 5vh 0px;
 	border-radius: 8px;
 	overflow: hidden;
