@@ -133,6 +133,8 @@ img:not([src]) {
 // App
 .app-container {
 	transition: background-image 450ms ease;
+	opacity: 0;
+	animation-delay: 400ms;
 	animation: fadeIn 650ms ease-in-out forwards;
 	position: relative;
 	background-size: cover;
